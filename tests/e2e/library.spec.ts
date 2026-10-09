@@ -7,7 +7,7 @@ async function nameBoard(page: Page, name: string, collection = '') {
   await page.getByLabel('Collection').fill(collection)
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
-  await expect(page.locator('.tl-container')).toBeFocused()
+  await expect(page.getByRole('application', { name: 'tldraw', exact: true })).toBeFocused()
 }
 async function appearance(page: Page, mode: string) {
   await page.getByRole('button', { name: 'Preferences', exact: true }).click()
@@ -39,7 +39,7 @@ test('created and edited sorting persist, collections stay available, scrollbar 
   await expect(page.locator('.card-title')).toHaveText(['Beta', 'Alpha'])
   await choose(page, 'Sort boards', 'Oldest created')
   await expect(page.locator('.card-title')).toHaveText(['Alpha', 'Beta'])
-  await expect(page.locator('.tl-container')).toBeFocused()
+  await expect(page.getByRole('application', { name: 'tldraw', exact: true })).toBeFocused()
   const shape = page.locator('.tl-shape').first()
   const before = (await shape.boundingBox())!
   await page.keyboard.down('Space')
@@ -206,7 +206,7 @@ test('text-size dropdown handles keyboard input without triggering canvas shortc
     'aria-pressed',
     'true',
   )
-  await expect(page.locator('.tl-container')).toBeFocused()
+  await expect(page.getByRole('application', { name: 'tldraw', exact: true })).toBeFocused()
   await size.click()
   await page.screenshot({ path: '.qa/text-menu-v4.png', animations: 'disabled' })
   await page.keyboard.press('Escape')

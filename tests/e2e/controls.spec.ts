@@ -11,7 +11,7 @@ test('Space pans after using controls and returns to drawing on release', async 
     await page.getByRole('button', { name: control, exact: true }).click()
     if (control === 'Zoom in')
       await expect(page.getByRole('button', { name: 'Zoom options' })).toContainText('125%')
-    await expect(page.locator('.tl-container')).toBeFocused()
+    await expect(page.getByRole('application', { name: 'tldraw', exact: true })).toBeFocused()
     const start = (await shape.boundingBox())!
     await page.keyboard.down('Space')
     await page.mouse.move(1100, 400)
