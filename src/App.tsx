@@ -141,8 +141,8 @@ export function App() {
     if (issue) setError(issue.message)
   }, [])
   useEffect(() => {
+    document.title = current ? `${current.board.title} · Folio` : 'Folio · Whiteboard'
     if (!current) return
-    document.title = `${current.board.title} · Folio`
     try {
       localStorage.setItem('folio-active', current.board.id)
     } catch {
@@ -178,6 +178,9 @@ export function App() {
   }, [toast])
   useEffect(() => {
     document.documentElement.dataset.theme = prefs.theme
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', prefs.theme === 'dark' ? '#191b22' : '#f8f9fc')
     try {
       localStorage.setItem('folio-preferences', JSON.stringify(prefs))
     } catch {

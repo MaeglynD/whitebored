@@ -16,6 +16,39 @@ export function TextControls() {
   } | null>(null)
   const [draft, setDraft] = useState<string | null>(null)
   const skipBlur = useRef(false)
+  const textSelection = useRef<{ shapeId: string; from: number; to: number } | null>(null)
+  const rememberSelection = () => {
+    const textEditor = editor.getRichTextEditor()
+    const selection = window.getSelection()
+    const shapeId = editor.getEditingShapeId()
+    if (
+      !shapeId ||
+      !textEditor ||
+      textEditor.isDestroyed ||
+      !selection?.anchorNode ||
+      !selection.focusNode
+    )
+      return
+    const { view } = textEditor
+    if (view.dom.contains(selection.anchorNode) && view.dom.contains(selection.focusNode)) {
+      // Native arrow-key selection can lead the editor's selectionchange listener.
+      textSelection.current = {
+        shapeId,
+        from: view.posAtDOM(selection.anchorNode, selection.anchorOffset),
+        to: view.posAtDOM(selection.focusNode, selection.focusOffset),
+      }
+    }
+  }
+  const resumeEditing = () => {
+    const textEditor = editor.getRichTextEditor()
+    if (editor.getEditingShapeId() && textEditor && !textEditor.isDestroyed) {
+      const saved = textSelection.current
+      if (saved?.shapeId === editor.getEditingShapeId()) textEditor.commands.setTextSelection(saved)
+      // Restore the editor's selection, not the browser's discarded DOM caret.
+      textEditor.view.focus()
+    } else focusCanvas(editor)
+    textSelection.current = null
+  }
   const state = useValue(
     'text controls',
     () => {
@@ -117,19 +150,15 @@ export function TextControls() {
         role="group"
         aria-label="Text formatting"
         data-app-ui
+        onPointerDownCapture={rememberSelection}
+        onFocusCapture={rememberSelection}
         onKeyDownCapture={(event) => editor.markEventAsHandled(event.nativeEvent)}
         onKeyUpCapture={(event) => editor.markEventAsHandled(event.nativeEvent)}
       >
         <Select
           label="Text font"
           value={shape.props.font}
-          onClose={() => {
-            const input = editor
-              .getContainer()
-              .querySelector<HTMLElement>('[contenteditable="true"]')
-            if (input) input.focus()
-            else focusCanvas(editor)
-          }}
+          onClose={resumeEditing}
           onChange={(font) => update({ font: font as TLTextShape['props']['font'] })}
           options={[
             { value: 'sans', label: 'Sans' },
@@ -199,11 +228,7 @@ export function TextControls() {
               if (skipBlur.current) {
                 event.currentTarget.blur()
                 skipBlur.current = false
-                const input = editor
-                  .getContainer()
-                  .querySelector<HTMLElement>('[contenteditable="true"]')
-                if (input) input.focus()
-                else focusCanvas(editor)
+                resumeEditing()
               }
             }}
           />

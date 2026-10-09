@@ -10,6 +10,10 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "assets:icons": "node scripts/create-icons.mjs",
+    "docs:capture": "node scripts/capture-demo.mjs",
+    "deploy": "pnpm release:check && pnpm build && wrangler deploy",
+    "deploy:preview": "pnpm build && wrangler deploy",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "desktop": "electron .",
@@ -42,10 +46,12 @@
     "electron-builder": "^26.0.12",
     "fake-indexeddb": "^6.2.4",
     "prettier": "^3.6.2",
+    "sharp": "0.35.5",
     "typescript": "~5.9.3",
     "vite": "^7.2.0",
     "vite-plugin-pwa": "^1.0.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "4.149.0"
   },
   "build": {
     "appId": "app.folio.canvas",
@@ -68,12 +74,14 @@
       "icon": "public/folio.ico"
     },
     "mac": {
+      "icon": "public/icon-512.png",
       "target": [
         "dmg"
       ],
       "category": "public.app-category.productivity"
     },
     "linux": {
+      "icon": "public/icon-512.png",
       "target": [
         "AppImage"
       ],

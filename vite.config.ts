@@ -26,11 +26,18 @@ export default defineConfig({
     },
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
+      includeAssets: [
+        'favicon.svg',
+        'favicon.ico',
+        'apple-touch-icon.png',
+        'icon-192.png',
+        'icon-512.png',
+        'icon-maskable.png',
+      ],
       manifest: {
         name: 'Folio',
         short_name: 'Folio',
-        description: 'Your ideas, at home on an infinite canvas.',
+        description: 'A whiteboard for sketches, notes, and ideas. Saved on your device.',
         theme_color: '#f8f9fc',
         background_color: '#f8f9fc',
         display: 'standalone',
@@ -39,6 +46,7 @@ export default defineConfig({
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

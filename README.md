@@ -1,106 +1,105 @@
-# Folio
+<div align="center">
+  <img src="public/favicon.svg" alt="" width="64" height="64">
+  <h1>Folio</h1>
+  <p>A quiet whiteboard for sketches, notes, and ideas.</p>
+  <p>
+    <a href="https://github.com/MaeglynD/canvas/actions/workflows/ci.yml"><img src="https://github.com/MaeglynD/canvas/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a>
+    <img src="https://img.shields.io/badge/TypeScript-5.9-5969ce?style=flat&labelColor=292e39" alt="TypeScript 5.9">
+    <a href="https://tldraw.dev"><img src="https://img.shields.io/badge/built_with-tldraw-5969ce?style=flat&labelColor=292e39" alt="Built with tldraw"></a>
+  </p>
+  <p>
+    <a href="#preview">Preview</a> ·
+    <a href="#run-locally">Run locally</a> ·
+    <a href="docs/GUIDE.md">Guide</a> ·
+    <a href="docs/DEPLOYMENT.md">Deploy</a> ·
+    <a href="https://github.com/MaeglynD/canvas/issues">Feedback</a>
+  </p>
+  <br>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/folio-dark.png">
+    <img src="docs/media/folio-light.png" alt="Folio showing a reading-room sketch, a board library, and compact drawing controls." width="1200">
+  </picture>
+</div>
 
-A canvas-first drawing workspace. Compact floating controls, a collapsible board sidebar, editable shortcuts, and local autosave. Built with React + tldraw for the browser, offline installation, and desktop.
+<br>
 
-## Run
+Folio keeps the canvas in focus: smooth ink, a small set of tools, and a board library that stays out of the way until you need it. Your work saves on your device. No account needed.
 
-Use Node.js 24 and pnpm 11 (the package manager version is pinned in `package.json`).
+| Drawing                                                                                                            | Workspace                                                                                                     |
+| :----------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| **Draw & write**<br>Pressure-aware ink, colours, stroke width, opacity, and text with adjustable wrapping.         | **Keep several boards**<br>Thumbnails, collections, favourites, search, and sorting by creation or last edit. |
+| **Make the controls yours**<br>Editable shortcuts, smooth held-key zoom, Space to pan, and adjustable camera feel. | **Work in light or dark**<br>Matching canvas and previews, an optional dot grid, and independent snapping.    |
+| **Take your work with you**<br>Editable single-board and whole-library backups. PNG and SVG exports for sharing.   | **Keep working offline**<br>Install the browser app after its first online load, or build the desktop app.    |
+
+## Preview
+
+<a href="docs/media/folio-demo.mp4">
+  <img src="docs/media/folio-demo.gif" alt="Recorded demo: switch boards, sketch a line, and change to dark mode." width="960">
+</a>
+
+[Watch / download the recording](docs/media/folio-demo.mp4) · [Light screenshot](docs/media/folio-light.png) · [Dark screenshot](docs/media/folio-dark.png)
+
+## Run locally
+
+Use **Node.js 24** and **pnpm 11.25.0**.
 
 ```sh
+git clone https://github.com/MaeglynD/canvas.git
+cd canvas
 pnpm install
 pnpm dev
 ```
 
-Open `http://127.0.0.1:5173`. The development server binds only to the local machine. The original project at `../whiteboard` and its database are not modified or connected to this app.
+Open **http://127.0.0.1:5173**. For a production build, run `pnpm build`. See the [deployment guide](docs/DEPLOYMENT.md) for Cloudflare hosting and the tldraw key needed on a public domain.
+
+<details>
+<summary><strong>A few useful controls</strong></summary>
+
+<br>
+
+| Action                              | Default                               |
+| :---------------------------------- | :------------------------------------ |
+| Select · Pen · Eraser · Text · Hand | `1` · `2` · `3` · `4` · `5`           |
+| Pan                                 | Hold `Space` and drag, or middle-drag |
+| Zoom in / out                       | Hold `E` / `Q`, or `Ctrl/Cmd` + wheel |
+| Fit drawing / reset zoom            | `Z` / `R`                             |
+| Previous / next toolbar colour      | `A` / `D`                             |
+| Thinner / thicker stroke            | `S` / `W`                             |
+| Lower / higher opacity              | `F` / `G`                             |
+| Board library                       | `Ctrl/Cmd K`                          |
+| Edit shortcuts                      | `/`                                   |
+
+Every binding can be changed from **Shortcuts**. [Full controls and text guide →](docs/GUIDE.md#controls)
+
+</details>
+
+<details>
+<summary><strong>Development & desktop</strong></summary>
+
+<br>
 
 ```sh
-pnpm build          # TypeScript check + production web/PWA build
-pnpm preview        # Preview the built app locally
-pnpm test           # Storage transactions and failed-save recovery
-pnpm test:e2e       # Drawing, library, assets, conflict and large-board tests
-pnpm test:offline   # Production service-worker/offline check on port 5188
-```
-
-For browser tests, first run `pnpm exec playwright install chromium`. Stop any unrelated service on the configured test ports before testing. Never use real personal boards as test fixtures.
-
-## Desktop
-
-```sh
-pnpm exec install-electron
+pnpm test                         # Storage and backup checks
+pnpm exec playwright install chromium
+pnpm test:e2e                     # Browser interactions
 pnpm build
-pnpm desktop
-pnpm desktop:pack
+pnpm test:offline                 # Production offline behavior
+pnpm desktop                     # Open the built app in Electron
+pnpm desktop:pack                # Package for the current OS
 ```
 
-The desktop shell uses packaged files and its own IndexedDB library under Electron's OS-specific user-data directory. It needs no local web server, VBS launcher, external Node.js installation, or network connection for ordinary drawing. The same renderer and storage code serve both platforms. Browser and desktop libraries are separate; move boards with editable exports.
+The manual desktop workflow builds Windows, macOS, and Linux packages. Public installers require the appropriate tldraw key and platform signing setup; there is no native auto-updater yet. [Desktop setup →](docs/GUIDE.md#desktop)
 
-`pnpm desktop:dist` creates installers for the current OS, after checking for a configured tldraw key. The manual GitHub Actions desktop workflow builds Windows, macOS, and Linux artifacts; it does not publish them. Certificates, notarization, and signing credentials must be configured before a public native release. Keep Electron updated.
+The UI is React + TypeScript; drawing is powered by tldraw. Vite builds the web app, IndexedDB stores documents and media, and Electron hosts the same app on desktop. [Architecture decisions →](docs/DECISIONS.md)
 
-## Your boards
+To reproduce the artwork, run `pnpm assets:icons`. With the dev server running, Chromium installed, and FFmpeg on your path, `pnpm docs:capture` creates the screenshots and recording using synthetic boards in a fresh browser profile.
 
-- Click the stacked-board icon or press Ctrl/Cmd K to toggle the board sidebar. It stays open across board switches and reloads. A single menu filters All boards, Favourites, Collections, and individual collections. The adjacent sort button offers newest/oldest creation and most/least recent editing; your choice persists.
-- The plus beside the title immediately creates a blank board. The five primary tools are Select, Pen, Eraser, Text, and Hand.
-- Click the title to rename a board or assign a collection. Create a collection by entering a new name.
-- The star beside the title toggles a favourite. Rename by clicking the title. These actions are no longer repeated in the board menu.
-- Delete in the board menu or on a library card asks for confirmation, then permanently removes the board and its records. Images shared with another board are retained. On upgrading from the old Trash workflow, previously trashed boards return to the library; none are automatically purged.
-- Thumbnails are cached in both light and dark modes. Older previews rebuild as their cards come into view, without opening those boards or changing the canvas theme.
-- Autosave writes changed records in atomic IndexedDB transactions. Images are stored as binary blobs. Saving stays visually quiet; errors still show an explicit warning with recovery actions.
-- Failed saves keep pending edits in memory and show retry/export actions. A close warning protects pending work where the browser supports it. A crash before a transaction commits can still lose the latest edits: export backups for important work.
-- Another window modifying the active board triggers a warning and makes this window read-only. Export unsaved edits, then reopen the saved version. Revision checks prevent stale writes.
-- **Export all boards** in the sidebar saves the entire library in a single `.canvas` file, including collections, favourites, timestamps and embedded media. Imports accept a single board, a library backup, or several files selected together (up to 512 MB total). Every board is validated before the whole batch is added atomically as new copies; existing boards are never overwritten.
-- A single-board `.canvas` backup embeds images/video and preserves the editable document, metadata and view. PNG and SVG exports use the selection, or the current page when nothing is selected.
-- Import `.canvas`, `.tldr`, and the old app's `.folio` exports. Import always creates separate copies. The `.folio` importer preserves the original dark palette and custom stroke widths. It does not modify or directly import the old SQLite database.
-- Imported media remains editable; original files with unresolved local-only image references must be exported again from their source app.
-- Existing multi-page imports remain accessible through **Board menu → Imported pages**. New boards have one canvas, with no page selector or page-creation controls.
+</details>
 
-Browser storage is local to the browser profile **and origin**. Changing host, port, browser, or device creates a separate library. Clearing site data can erase it. Folio requests persistent storage after creating a board, but a browser can refuse the request. This is not cloud backup or cross-device sync.
+## Your data
 
-## Controls
+Boards stay in this browser profile, on this site address. They are **not synced or backed up to a server**. Clearing site data can erase them. Use **Export all boards** for a portable backup; import it to move between browsers, the desktop app, or a new domain. [Storage and imports →](docs/GUIDE.md#your-boards)
 
-| Action                                   | Shortcut                                       |
-| ---------------------------------------- | ---------------------------------------------- |
-| Select / pen / eraser / text / hand      | 1 / 2 / 3 / 4 / 5                              |
-| Tool aliases                             | V / P or B / — / T / H                         |
-| Continuous zoom in / out                 | Hold E / Q; + / − also work                    |
-| Reset zoom / fit drawing / fit selection | R / Z / Shift 2                                |
-| Temporary pan                            | Space + drag or middle-button drag             |
-| Wheel                                    | Pan; Ctrl/Cmd + wheel zooms; touch pinch zooms |
-| Previous / next visible toolbar colour   | A / D (also , / .)                             |
-| Thinner / thicker stroke                 | S / W (also [ / ])                             |
-| Lower / higher opacity                   | F / G (also Shift [ / Shift ])                 |
-| Open ink controls                        | 6 or I                                         |
-| Undo / redo                              | Ctrl/Cmd Z / Ctrl/Cmd Shift Z                  |
-| Delete / duplicate                       | Delete or Backspace / Ctrl/Cmd D               |
-| Board sidebar                            | Ctrl/Cmd K                                     |
-| New board                                | Ctrl/Cmd Alt N                                 |
-| Save                                     | Ctrl/Cmd S                                     |
-| Preferences                              | Ctrl/Cmd ,                                     |
-| Edit shortcuts                           | / or ?                                         |
-| Hide / show controls                     | Ctrl/Cmd .                                     |
-| Fullscreen                               | Alt Enter                                      |
+---
 
-These are defaults. Click **Shortcuts** at the bottom left to record replacement keys, add alternatives, remove bindings, or reset all. Conflicts are explained before a binding is changed. Version 0.3 starts with the requested defaults under a new preference key; the previous map remains stored as `folio-keymap-v2`. Custom bindings persist on the device, and tooltips reflect them. Clipboard/browser-reserved combinations, Escape, and Tab cannot be reassigned.
-
-Space is a held gesture: press it, drag, then release to return to the current tool. The camera controller is ported from the original whiteboard: pointer-anchored exponential zoom, animation-frame-batched panning, and eased key release. **Preferences** exposes zoom speed (1.2–12×/second, default 5) and easing (0–200 ms, default 60). Mouse pan stops on release. The default wheel behavior is pan; Preferences can change it to zoom. Typing, composition, dialogs, sliders, and keyboard-focused controls retain their own keyboard input. Pointer-operated controls keep canvas focus, and Escape closes their popover before affecting the drawing tool.
-
-**Text:** click to type, or drag with the Text tool to create a fixed-width box. Drag either side handle to change line wrapping, including while editing; corner handles scale the text. The contextual text bar offers an exact width, automatic/fixed wrapping, font and alignment, and explicit Edit/Done actions. Width changes keep the font size and support undo.
-
-**Board menu:** switch light/dark mode, show the dot grid, or enable Snapping. Grid visibility and snapping are independent. Snapping is off by default; when enabled it aligns to objects and to the grid if shown.
-
-The dock has six quick colour swatches, width −/+ controls (0.25–6 px), and an opacity slider (10–100%). The ink button opens the full palette. Text size replaces width when editing text. Changes apply to selected ink and the next stroke. Image insertion and export are in the top-right menu. Native tldraw selection, pressure-aware strokes, text editing, clipboard, and context actions are retained.
-
-## Offline browser installation
-
-The production build includes a manifest and service worker. After the first complete online load, bundled app code, icons, translations, and fonts are cached. Chrome/Edge expose browser installation; Safari and mobile browsers provide their platform's add-to-home-screen/dock flow. A downloaded desktop app is a separate option.
-
-Updates are offered with **Save & update**, so a waiting service worker does not abruptly reload an active drawing. External embeds and remote linked media may still need the network.
-
-## Public release
-
-**This is a release candidate, not a licensed public deployment.** Add the public key issued by tldraw to `.env.local` as `VITE_TLDRAW_LICENSE_KEY`, or to the build environment. Run `pnpm release:check`, then build. That check only verifies a key is configured; test actual domain coverage and expiry on the intended production origin. Preserve tldraw's watermark and licensing logic.
-
-For web hosting, serve `dist/` over HTTPS on a stable origin with SPA fallback to `index.html`. Serve HTML and `sw.js` with revalidation; hashed assets can be cached immutably. No app server or account system is required. Ensure your hosting provider sends correct MIME types and compresses assets.
-
-Before native release, sign Windows binaries and sign/notarize macOS binaries, test on each target OS, verify pen hardware, and choose an update-distribution process. The Windows preview produced locally is unsigned. There is no native auto-updater yet.
-
-See [the research and architecture decisions](docs/DECISIONS.md) and [verification notes](docs/VERIFICATION.md).
+Built on [tldraw](https://tldraw.dev). Its SDK has its own [license](https://tldraw.dev/community/license); public deployments need a valid trial, hobby, or commercial key. Third-party notices are included with the app.

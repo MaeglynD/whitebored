@@ -12,6 +12,8 @@ const textShape = (data: any) =>
 async function text(page: Page, value: string) {
   await page.getByRole('button', { name: 'Text', exact: true }).click()
   await page.mouse.click(503, 347)
+  // tldraw schedules initial rich-text focus after 100 ms.
+  await page.waitForTimeout(150)
   await page.keyboard.type(value)
   await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible()
 }
@@ -57,6 +59,7 @@ test('text wraps through side handles while editing, numeric width, undo and rel
   await expect(page.getByRole('spinbutton', { name: 'Text width' })).toHaveValue('180')
   await page.getByRole('button', { name: 'Edit text', exact: true }).click()
   await expect(page.locator('[contenteditable=true]')).toBeFocused()
+  await page.waitForTimeout(150)
   await page.keyboard.press('Control+End')
   await page.keyboard.type(' More notes.')
   await page.getByRole('button', { name: 'Done', exact: true }).click()
@@ -278,6 +281,25 @@ test('text controls preserve typing focus and fit a narrow screen', async ({ pag
     const bounds = await control.boundingBox()
     if (bounds) expect(bounds.x + bounds.width).toBeLessThanOrEqual(320)
   }
+})
+
+test('text formatting restores a caret and selection in the middle of a sentence', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await ready(page)
+  await text(page, 'Alpha Beta')
+  await page.keyboard.press('Control+Home')
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight')
+  await page.getByRole('spinbutton', { name: 'Text width' }).fill('300')
+  await page.getByRole('spinbutton', { name: 'Text width' }).press('Enter')
+  await page.keyboard.type('calm ')
+  for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight')
+  await choose(page, 'Text font', 'Mono')
+  await page.keyboard.type('Gamma')
+  await page.getByRole('button', { name: 'Done', exact: true }).click()
+  const shape = textShape((await backup(page)).data)
+  expect(JSON.stringify(shape.props.richText)).toContain('Alpha calm Gamma')
 })
 
 test('wrapping handles respect rotated and scaled text', async ({ page }) => {
