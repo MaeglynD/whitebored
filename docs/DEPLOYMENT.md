@@ -2,6 +2,8 @@
 
 Folio is a static Vite app. Boards and media live in the user's browser, in IndexedDB; hosting needs no database or application server.
 
+**Live app:** [folio.abelian.workers.dev](https://folio.abelian.workers.dev). The initial deployment uses a tldraw trial that expires **17 January 2027**; replace it with a suitable hobby or other active key before that date.
+
 ## Cloudflare
 
 The included configuration uses **Workers Static Assets**. Static requests and asset storage are free under [Cloudflare's current pricing](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/). There is no Worker script or paid backend here. Start on the free `workers.dev` address and attach a custom domain when ready.

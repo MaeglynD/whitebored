@@ -8,6 +8,7 @@
     <a href="https://tldraw.dev"><img src="https://img.shields.io/badge/built_with-tldraw-5969ce?style=flat&labelColor=292e39" alt="Built with tldraw"></a>
   </p>
   <p>
+    <strong><a href="https://folio.abelian.workers.dev">Open Folio ↗</a></strong> ·
     <a href="#preview">Preview</a> ·
     <a href="#run-locally">Run locally</a> ·
     <a href="docs/GUIDE.md">Guide</a> ·
