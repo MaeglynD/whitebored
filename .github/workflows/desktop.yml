@@ -28,7 +28,7 @@ jobs:
       - run: pnpm desktop:dist --publish never
       - uses: actions/upload-artifact@v4
         with:
-          name: folio-${{ matrix.os }}
+          name: whitebored-${{ matrix.os }}
           path: |
             release/*.exe
             release/*.dmg

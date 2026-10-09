@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
-const origin = process.env.FOLIO_DEMO_ORIGIN || 'http://127.0.0.1:5173'
+const origin = process.env.WHITEBORED_DEMO_ORIGIN || 'http://127.0.0.1:5173'
 await mkdir('.qa/demo-video', { recursive: true })
 await mkdir('docs/media', { recursive: true })
 const browser = await chromium.launch()
@@ -15,13 +15,13 @@ const videoStart = Date.now()
 const errors = []
 page.on('pageerror', (error) => errors.push(error.message))
 // A fresh Playwright context has no access to the user's browser profile or boards.
-await page.route(`${origin}/__folio_docs_seed__`, (route) =>
+await page.route(`${origin}/__whitebored_docs_seed__`, (route) =>
   route.fulfill({
     contentType: 'text/html',
     body: '<!doctype html><html><head></head><body></body></html>',
   }),
 )
-await page.goto(`${origin}/__folio_docs_seed__`)
+await page.goto(`${origin}/__whitebored_docs_seed__`)
 await page.evaluate(async () => {
   const { seedDemo } = await import('/scripts/demo-scene.ts')
   await seedDemo()
@@ -31,7 +31,7 @@ await page.getByRole('button', { name: 'Pen', exact: true }).waitFor()
 await page.locator('.board-thumbnail img').first().waitFor()
 await page.waitForTimeout(2000)
 await page.mouse.move(1410, 110)
-await page.screenshot({ path: 'docs/media/folio-light.png' })
+await page.screenshot({ path: 'docs/media/whitebored-light.png' })
 const clipStart = (Date.now() - videoStart) / 1000
 await page.waitForTimeout(1600)
 await page.getByRole('button', { name: 'Open Small projects', exact: true }).click()
@@ -58,7 +58,7 @@ await page.waitForTimeout(2000)
 await page.getByRole('button', { name: 'Boards', exact: true }).click()
 await page.waitForTimeout(1800)
 await page.mouse.move(1410, 110)
-await page.screenshot({ path: 'docs/media/folio-dark.png' })
+await page.screenshot({ path: 'docs/media/whitebored-dark.png' })
 await page.waitForTimeout(2200)
 const clipLength = (Date.now() - videoStart) / 1000 - clipStart
 const video = page.video()
@@ -99,13 +99,13 @@ ffmpeg([
   '-movflags',
   '+faststart',
   '-an',
-  'docs/media/folio-demo.mp4',
+  'docs/media/whitebored-demo.mp4',
 ])
 ffmpeg([
   '-vf',
   'fps=8,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=80[p];[s1][p]paletteuse=dither=bayer',
   '-loop',
   '0',
-  'docs/media/folio-demo.gif',
+  'docs/media/whitebored-demo.gif',
 ])
 console.log('Captured light/dark screenshots and a real app recording in docs/media.')

@@ -1,15 +1,24 @@
 const { app, BrowserWindow, Menu, shell, protocol, net, dialog } = require('electron')
 const path = require('node:path')
+const { mkdirSync } = require('node:fs')
+const { resolveProfile } = require('./profile.cjs')
 const { pathToFileURL } = require('node:url')
 
-// A stable, secure origin gives the installed app its own durable IndexedDB library.
+// Retain the pre-rename origin so installed boards remain readable.
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'folio',
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
   },
 ])
-if (process.env.FOLIO_TEST_DATA) app.setPath('userData', path.resolve(process.env.FOLIO_TEST_DATA))
+const testData = process.env.WHITEBORED_TEST_DATA || process.env.FOLIO_TEST_DATA
+if (testData) app.setPath('userData', path.resolve(testData))
+else {
+  // Reuse an existing profile in place; never copy a live Chromium database.
+  const profile = resolveProfile(app.getPath('appData'))
+  mkdirSync(profile, { recursive: true })
+  app.setPath('userData', profile)
+}
 const single = app.requestSingleInstanceLock()
 if (!single) app.quit()
 let mainWindow
@@ -36,7 +45,7 @@ app.whenReady().then(() => {
       height: 940,
       minWidth: 540,
       minHeight: 520,
-      title: 'Folio',
+      title: 'Whitebored',
       backgroundColor: '#fbfaf7',
       icon: path.join(__dirname, '../dist/icon-512.png'),
       show: false,
@@ -79,7 +88,7 @@ app.whenReady().then(() => {
       if (choice === 1) event.preventDefault()
     })
     mainWindow.once('ready-to-show', () => {
-      if (!process.env.FOLIO_TEST_DATA) mainWindow.show()
+      if (!testData) mainWindow.show()
     })
     void mainWindow.loadURL('folio://app/')
   }

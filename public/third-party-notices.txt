@@ -1,4 +1,4 @@
-Folio — third-party notices
+Whitebored — third-party notices
 
 The tldraw SDK has its own license. Its inclusion does not grant a production license. See https://tldraw.dev/community/license.
 

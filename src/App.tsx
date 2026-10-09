@@ -141,7 +141,7 @@ export function App() {
     if (issue) setError(issue.message)
   }, [])
   useEffect(() => {
-    document.title = current ? `${current.board.title} · Folio` : 'Folio · Whiteboard'
+    document.title = current ? `${current.board.title} · Whitebored` : 'Whitebored'
     if (!current) return
     try {
       localStorage.setItem('folio-active', current.board.id)
@@ -423,7 +423,7 @@ export function App() {
     void transition(async () => {
       download(
         await exportLibrary(),
-        `Folio library ${new Date().toISOString().slice(0, 10)}.canvas`,
+        `Whitebored library ${new Date().toISOString().slice(0, 10)}.canvas`,
       )
       setToast('Library exported')
     }, 'Preparing library backup…')
@@ -738,7 +738,7 @@ export function App() {
           onClick={renameBoard}
           disabled={!current}
         >
-          <span>{current?.board.title || 'Folio'}</span>
+          <span>{current?.board.title || 'Whitebored'}</span>
           <Pencil size={11} />
         </button>
         {current && (
@@ -867,7 +867,7 @@ export function App() {
                             ? 'Delete board?'
                             : modal === 'reload'
                               ? 'Reopen saved version?'
-                              : 'Install Folio'}
+                              : 'Install Whitebored'}
                 </Dialog.Title>
                 <Dialog.Description className="dialog-description">
                   {modal === 'settings'
@@ -1027,7 +1027,7 @@ export function App() {
                 </div>
                 <button className="secondary full" onClick={() => setModal('install')}>
                   <Download size={16} />
-                  Install Folio
+                  Install Whitebored
                 </button>
               </div>
             )}
@@ -1136,7 +1136,7 @@ export function App() {
                 <Layers3 size={32} />
                 <p>
                   {navigator.userAgent.includes('Electron')
-                    ? 'You’re using the desktop app. Your boards are saved in Folio’s app storage.'
+                    ? 'You’re using the desktop app. Your boards are saved in Whitebored’s app storage.'
                     : 'Use “Install app” in Chrome or Edge. In Safari on Mac, choose File → Add to Dock. On mobile, use your browser’s Add to Home Screen option.'}
                 </p>
                 {installEvent && (
@@ -1150,7 +1150,7 @@ export function App() {
                     }
                   >
                     <Download size={16} />
-                    Install Folio
+                    Install Whitebored
                   </button>
                 )}
                 <p className="muted">

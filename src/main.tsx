@@ -15,7 +15,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
         <p>{this.state.error}</p>
         <p>Your saved boards are still on this device.</p>
         <button className="primary" onClick={() => location.reload()}>
-          Reopen Folio
+          Reopen Whitebored
         </button>
       </main>
     ) : (

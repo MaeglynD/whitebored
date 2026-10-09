@@ -35,9 +35,9 @@ export default defineConfig({
         'icon-maskable.png',
       ],
       manifest: {
-        name: 'Folio',
-        short_name: 'Folio',
-        description: 'A whiteboard for sketches, notes, and ideas. Saved on your device.',
+        name: 'Whitebored',
+        short_name: 'Whitebored',
+        description: 'A whiteboard app for pragmatists.',
         theme_color: '#f8f9fc',
         background_color: '#f8f9fc',
         display: 'standalone',

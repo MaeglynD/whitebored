@@ -18,7 +18,7 @@ export interface Board {
   legacy?: boolean
   template?: string
 }
-interface FolioDB extends DBSchema {
+interface WhiteboredDB extends DBSchema {
   boards: { key: string; value: Board }
   records: {
     key: [string, string]
@@ -27,9 +27,10 @@ interface FolioDB extends DBSchema {
   }
   assets: { key: string; value: Blob }
 }
-let connection: ReturnType<typeof openDB<FolioDB>> | undefined
+let connection: ReturnType<typeof openDB<WhiteboredDB>> | undefined
 const db = () =>
-  (connection ??= openDB<FolioDB>('folio-workspace-v1', 2, {
+  // Persisted identifiers predate the rename; changing them would hide existing boards.
+  (connection ??= openDB<WhiteboredDB>('folio-workspace-v1', 2, {
     upgrade(database, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         database.createObjectStore('boards', { keyPath: 'id' })

@@ -1,4 +1,4 @@
-# Folio guide
+# Whitebored guide
 
 A canvas-first drawing workspace. Compact floating controls, a collapsible board sidebar, editable shortcuts, and local autosave. Built with React + tldraw for the browser, offline installation, and desktop.
 
@@ -53,7 +53,7 @@ The desktop shell uses packaged files and its own IndexedDB library under Electr
 - Imported media remains editable; original files with unresolved local-only image references must be exported again from their source app.
 - Existing multi-page imports remain accessible through **Board menu → Imported pages**. New boards have one canvas, with no page selector or page-creation controls.
 
-Browser storage is local to the browser profile **and origin**. Changing host, port, browser, or device creates a separate library. Clearing site data can erase it. Folio requests persistent storage after creating a board, but a browser can refuse the request. This is not cloud backup or cross-device sync.
+Browser storage is local to the browser profile **and origin**. Changing host, port, browser, or device creates a separate library. Clearing site data can erase it. Whitebored requests persistent storage after creating a board, but a browser can refuse the request. This is not cloud backup or cross-device sync.
 
 ## Controls
 

@@ -3,11 +3,11 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 await mkdir('.qa', { recursive: true })
 const data = await mkdtemp(resolve('.qa/desktop-profile-'))
-const executablePath = resolve(process.argv[2] || 'release/preview/win-unpacked/Folio.exe')
+const executablePath = resolve(process.argv[2] || 'release/preview/win-unpacked/Whitebored.exe')
 const launch = () =>
   electron.launch({
     executablePath,
-    env: { ...process.env, FOLIO_TEST_DATA: data },
+    env: { ...process.env, WHITEBORED_TEST_DATA: data },
     timeout: 30000,
   })
 let app = await launch()
@@ -61,6 +61,9 @@ try {
   await expect(page.getByRole('button', { name: 'Zoom options' })).toContainText('100%')
   await page.getByRole('button', { name: 'Text', exact: true }).click()
   await page.mouse.click(420, 250)
+  // Let tldraw's scheduled initial rich-text focus complete before typing.
+  await page.waitForTimeout(150)
+  await expect(page.locator('[contenteditable=true]')).toBeFocused()
   await page.keyboard.type('Desktop text wrapping stays editable.')
   await page.getByRole('spinbutton', { name: 'Text width' }).fill('180')
   await page.getByRole('spinbutton', { name: 'Text width' }).press('Enter')

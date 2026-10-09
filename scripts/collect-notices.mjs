@@ -2,7 +2,7 @@ import { readdir, readFile, realpath, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 const seen = new Set()
 const notices = [
-  'Folio — third-party notices\n\nThe tldraw SDK has its own license. Its inclusion does not grant a production license. See https://tldraw.dev/community/license.\n\nThis file includes notices from the production dependency graph. Some dependencies may be removed by tree shaking.\n',
+  'Whitebored — third-party notices\n\nThe tldraw SDK has its own license. Its inclusion does not grant a production license. See https://tldraw.dev/community/license.\n\nThis file includes notices from the production dependency graph. Some dependencies may be removed by tree shaking.\n',
 ]
 async function findPackage(name, from) {
   for (let directory = from; ; directory = dirname(directory)) {

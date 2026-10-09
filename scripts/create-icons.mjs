@@ -42,5 +42,5 @@ async function ico(sizes, name) {
   )
 }
 await ico([16, 32, 48], 'favicon')
-await ico([16, 32, 48, 64, 128, 256], 'folio')
+await ico([16, 32, 48, 64, 128, 256], 'whitebored')
 console.log('Generated browser, installable app, and Windows icons from public/favicon.svg.')
