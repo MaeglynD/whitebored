@@ -1,0 +1,89 @@
+{
+  "name": "folio-canvas",
+  "version": "0.5.0",
+  "private": true,
+  "description": "An open canvas for drawing, thinking, and handwritten notes.",
+  "author": "Folio contributors",
+  "type": "module",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "desktop": "electron .",
+    "desktop:pack": "pnpm build && electron-builder --dir",
+    "desktop:dist": "pnpm release:check && pnpm build && electron-builder",
+    "release:check": "node scripts/check-release.mjs",
+    "test:offline": "playwright test --config playwright.offline.config.ts",
+    "test:desktop": "node scripts/desktop-smoke.mjs",
+    "format": "prettier --write src desktop scripts tests *.ts *.json *.yaml docs README.md .github"
+  },
+  "dependencies": {
+    "@fontsource/dm-sans": "5.3.0",
+    "@radix-ui/react-dialog": "1.1.15",
+    "@radix-ui/react-select": "2.3.8",
+    "@tldraw/assets": "5.4.2",
+    "idb": "8.0.3",
+    "lucide-react": "0.577.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tldraw": "5.4.2",
+    "workbox-window": "^7.4.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "@types/node": "22.19.0",
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "@vitejs/plugin-react": "5.1.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.12",
+    "fake-indexeddb": "^6.2.4",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.0",
+    "vite-plugin-pwa": "^1.0.3",
+    "vitest": "^3.2.4"
+  },
+  "build": {
+    "appId": "app.folio.canvas",
+    "productName": "Folio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "public/folio.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Graphics"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "npmRebuild": false
+  },
+  "packageManager": "pnpm@11.25.0"
+}

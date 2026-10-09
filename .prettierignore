@@ -1,0 +1,7 @@
+node_modules
+dist
+release
+.qa
+test-results
+pnpm-lock.yaml
+prompts-and-responses

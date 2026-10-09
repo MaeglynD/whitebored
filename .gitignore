@@ -1,0 +1,68 @@
+# Dependencies and package-manager caches
+node_modules/
+.pnpm-store/
+
+# Web/PWA builds, desktop packages and build caches
+dist/
+dev-dist/
+release/
+*.tsbuildinfo
+.vite/
+.vite-temp/
+.cache/
+.eslintcache
+.stylelintcache
+
+# Test output, coverage and isolated browser/desktop profiles
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+.nyc_output/
+.qa/
+
+# Local environment values; keep documented templates versioned
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local signing identities and private keys
+*.p12
+*.pfx
+*.key
+*.pem
+
+# Runtime and package-manager logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+/logs/
+
+# Local working files and conversation exports
+/prompts-and-responses/
+/tmp/
+/temp/
+.history/
+*.swp
+*.swo
+*~
+
+# Editor state; allow useful shared VS Code configuration
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/*.code-snippets
+
+# OS metadata
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
