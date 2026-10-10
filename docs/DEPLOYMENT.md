@@ -1,12 +1,21 @@
 # Deploy Whitebored
 
-Whitebored is a static Vite app. Boards and media live in the user's browser, in IndexedDB; hosting needs no database or application server.
+Whitebored serves a Vite app with Cloudflare Workers Static Assets. Private boards and media stay in the user's IndexedDB. Optional shared copies use a Worker API, one SQLite Durable Object per room, and a private R2 media bucket.
 
 **Live app:** [whitebored.app](https://whitebored.app). The current deployment uses a tldraw trial that expires **17 January 2027**; replace it with a suitable hobby or other active key before that date.
 
 ## Cloudflare
 
-The included configuration uses **Workers Static Assets**. Static requests and asset storage are free under [Cloudflare's current pricing](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/). There is no Worker script or paid backend here. `wrangler.jsonc` connects the `whitebored` Worker to the custom domain `whitebored.app`; Cloudflare manages its DNS record and HTTPS certificate.
+`wrangler.jsonc` connects the `whitebored` Worker to `whitebored.app`; Cloudflare manages DNS and HTTPS. Static requests use Static Assets; `/api/*` runs the collaboration Worker. Shared rooms use `ROOMS`, creation quotas use `SHARE_LIMITS`, and the global media guard uses `MEDIA_BUDGET`. All three are SQLite Durable Objects. Only the media guard accesses `MEDIA` (R2 bucket `whitebored-media`).
+
+Before the first deployment with sharing:
+
+1. Keep the account on **Workers Free**. On this plan, Workers and SQLite Durable Objects fail at their free quotas instead of billing excess usage. Do not upgrade without revisiting the cost controls below. Enable **Storage & databases → R2 → Overview**; R2's subscription is separate from the Workers plan.
+2. Run `pnpm exec wrangler r2 bucket create whitebored-media`. Keep the bucket private: no public domain, public development URL or CORS rules are needed.
+3. Ensure the deployment identity can deploy Workers/Durable Objects and read R2 bucket configuration. The app accesses R2 through its binding, not an embedded API token.
+4. Run unit, sharing and browser tests, then deploy. Do not push a production auto-deploy branch with the new binding until the bucket exists.
+
+The deployment uses quotas checked before each R2 operation plus a scheduled audit. See [cost controls and emergency shutdown](COST-CONTROLS.md). These controls cover Whitebored's code and private bucket, not other projects or direct uploads made by an account administrator. R2's free allowance is shared across the account. Existing local-only boards incur no collaboration storage or API use.
 
 With Node.js 24 and the pinned pnpm version:
 
@@ -66,18 +75,17 @@ Browser storage belongs to an origin. To move boards from the [original address]
 
 ### Headers, caching, and updates
 
-`public/_headers` is copied into the deployment. Fingerprinted assets cache for a year; HTML, the service worker, and the manifest revalidate. Vite adds the content security policy. Cloudflare provides HTTPS and compression. The installed app offers **Save & update** when a new service worker is ready.
+`public/_headers` is copied into the deployment. Fingerprinted assets cache for a year; HTML, the service worker, and the manifest revalidate. Vite adds the content security policy, including WebSocket connections. API and private media responses use `no-store`, and the service worker excludes `/api/` navigations. Cloudflare provides HTTPS and compression. The local workspace offers **Save & update** when a new service worker is ready; reload shared tabs after their edits have synced.
 
 ## Analytics
 
-No analytics script is included. Start with Cloudflare's built-in traffic metrics. If visit analytics become useful, [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/about/) is a free option, but integrate it deliberately: Whitebored's browser title contains the current board name, which must not be sent as analytics data. The existing script CSP also requires an explicit change before a browser beacon can run. Board content should remain local.
+No analytics script is included. Start with Cloudflare's built-in traffic metrics. If visit analytics become useful, [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/about/) is a free option, but integrate it deliberately: board titles and shared-link fragments must not be sent as analytics data. The script CSP requires an explicit change before a browser beacon can run. Do not enable request logging that captures WebSocket query keys or Authorization headers.
 
 The tldraw trial has its own limited license telemetry, described in [its licensing documentation](https://tldraw.dev/community/license#data-collection). This is separate from app analytics.
 
 ## Other hosts
 
-- **GitHub Pages:** a good free alternative for this public repository. Publish `dist/` with GitHub Actions. The relative Vite base supports a repository subpath; use the repository's root entry URL.
-- **Vercel:** import the repository, choose Vite, set the build command to `pnpm build`, output to `dist`, and configure the tldraw key. Recreate the security/cache headers using Vercel's own configuration.
+Static-only hosts such as GitHub Pages and Vercel can serve the private-board app from `dist/`, but sharing needs the Worker API and storage bindings. The collaboration client uses the same origin; a different host would need a backend proxy and equivalent access controls. Cloudflare is the supported complete deployment.
 
 Choose one stable public origin. Deploying identical files to several hosts creates separate board libraries on each.
 

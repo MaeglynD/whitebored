@@ -1,4 +1,12 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   Tldraw,
   createTLStore,
@@ -22,6 +30,7 @@ import { focusCanvas } from './controls'
 import { assetUrls, normalTheme, legacyTheme, shapeUtils, storeShapeUtils } from './canvasConfig'
 import { renderPreviews } from './previews'
 import type { Keymap } from './keymap'
+import type { useSync } from '@tldraw/sync'
 
 const overrides: TLUiOverrides = {
   tools(_editor, tools) {
@@ -58,6 +67,8 @@ export interface CanvasHandle {
   dirty: () => boolean
 }
 export interface CanvasProps {
+  children?: ReactNode
+  remote?: ReturnType<typeof useSync>
   board: Board
   snapshot?: Partial<TLEditorSnapshot>
   onStatus: (status: SaveStatus, error?: Error) => void
@@ -193,7 +204,7 @@ export const EditorCanvas = forwardRef<CanvasHandle, CanvasProps>(
     return (
       <GridVisibility.Provider value={props.grid}>
         <Tldraw
-          store={store}
+          store={props.remote || store}
           shapeUtils={shapeUtils}
           assetUrls={assetUrls}
           themes={{ default: board.legacy ? legacyTheme : normalTheme }}
@@ -214,8 +225,8 @@ export const EditorCanvas = forwardRef<CanvasHandle, CanvasProps>(
               isPenMode: props.penOnly,
             })
             editor.setCameraOptions({ wheelBehavior: props.wheel })
-            if (!board.schema && board.template) seedBoard(editor, board.template)
-            saver.current = new BoardSaving(editor, board, onStatus)
+            if (!props.remote && !board.schema && board.template) seedBoard(editor, board.template)
+            if (!props.remote) saver.current = new BoardSaving(editor, board, onStatus)
             const removeWidth = editor.sideEffects.registerBeforeCreateHandler('shape', (shape) =>
               shape.type === 'draw' && typeof shape.meta.folioWidth !== 'number'
                 ? { ...shape, meta: { ...shape.meta, folioWidth: latestInk.current.width } }
@@ -233,6 +244,7 @@ export const EditorCanvas = forwardRef<CanvasHandle, CanvasProps>(
           }}
         >
           <CanvasControls
+            shared={!!props.remote}
             zoomSpeed={props.zoomSpeed}
             zoomEase={props.zoomEase}
             dark={props.dark}
@@ -246,6 +258,7 @@ export const EditorCanvas = forwardRef<CanvasHandle, CanvasProps>(
             changeInk={setInk}
             onAction={props.onAction}
           />
+          {props.children}
         </Tldraw>
       </GridVisibility.Provider>
     )

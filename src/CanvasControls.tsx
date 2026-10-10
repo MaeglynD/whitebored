@@ -38,6 +38,7 @@ import { Select } from './Select'
 import { applyInk, palette, widths, type Ink } from './ink'
 
 export interface CanvasControlsProps {
+  shared?: boolean
   dark: boolean
   grid: boolean
   snapping: boolean
@@ -455,7 +456,7 @@ export function CanvasControls(props: CanvasControlsProps) {
 
             <button onClick={() => action('duplicateBoard')}>
               <Copy size={15} />
-              <span>Duplicate board</span>
+              <span>{props.shared ? 'Save local copy' : 'Duplicate board'}</span>
             </button>
             {pages.length > 1 && (
               <button onClick={() => setPopover('pages')}>
@@ -495,11 +496,15 @@ export function CanvasControls(props: CanvasControlsProps) {
               <span>Fullscreen</span>
             </button>
 
-            <div className="menu-rule" />
-            <button className="danger" onClick={() => action('delete')}>
-              <Trash2 size={15} />
-              <span>Delete board</span>
-            </button>
+            {!props.shared && (
+              <>
+                <div className="menu-rule" />
+                <button className="danger" onClick={() => action('delete')}>
+                  <Trash2 size={15} />
+                  <span>Delete board</span>
+                </button>
+              </>
+            )}
           </div>
         )}
         {popover === 'pages' && (

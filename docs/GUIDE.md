@@ -19,6 +19,7 @@ pnpm preview        # Preview the built app locally
 pnpm test           # Storage transactions and failed-save recovery
 pnpm test:e2e       # Drawing, library, assets, conflict and large-board tests
 pnpm test:offline   # Production service-worker/offline check on port 5188
+pnpm test:sharing   # Build + two-browser collaboration tests against local Cloudflare emulation
 ```
 
 For browser tests, first run `pnpm exec playwright install chromium`. Stop any unrelated service on the configured test ports before testing. Never use real personal boards as test fixtures.
@@ -54,6 +55,24 @@ The desktop shell uses packaged files and its own IndexedDB library under Electr
 - Existing multi-page imports remain accessible through **Board menu → Imported pages**. New boards have one canvas, with no page selector or page-creation controls.
 
 Browser storage is local to the browser profile **and origin**. Changing host, port, browser, or device creates a separate library. Clearing site data can erase it. Whitebored requests persistent storage after creating a board, but a browser can refuse the request. This is not cloud backup or cross-device sync.
+
+## Sharing
+
+Click the people icon beside the board title, then **Create shared copy**. This explicitly uploads the board and its media. The original board stays local and independent. Open the shared board and copy its link to invite others; no account is required. Everyone with that link can edit and see live cursors. Preferences and camera positions remain personal, and undo affects your own edits.
+
+Previously opened shared boards appear under **Shared boards** at the bottom of the board sidebar. Shared rooms remain available after everyone closes their browser. They are stored using tldraw sync, Cloudflare Durable Objects (SQLite), and a private R2 media bucket. Local boards still use IndexedDB and are never uploaded automatically.
+
+The creator can choose **Share → Stop sharing** to revoke the link, disconnect collaborators and delete the online copy. Save the latest shared changes first. The owner key is stored separately in the creator's browser; clearing that browser's site data loses owner access. An edit link does not grant revocation access, and neither key is included in board exports. Revocation cannot erase copies that collaborators already saved.
+
+Use **Board menu → Save local copy** to keep a shared board in your private library, or **Export** for an editable file/image. **Export all boards** includes only local boards. Images and videos are embedded in editable exports; an unavailable upload must finish loading before it can be exported.
+
+Shared editing needs an internet connection. If disconnected, leave the tab open while it reconnects; pending edits stay in memory and merge when the connection returns. They are not a durable offline cache. Save a local copy before closing if a connection cannot be restored. Closing or navigating away warns when changes have not reached the server.
+
+Current limits: 20 connections per room, 20,000 records / 8 MiB of document data, 10 MiB per media file, and 100 MiB of media per room. PNG, JPEG, WebP, GIF, AVIF, MP4, WebM and MOV are supported. Bookmark cards and SVG uploads are not supported in shared rooms. Creation is limited to 20 rooms per IP address per UTC day and 500 across the deployment. Deleting a shape retains its media for undo; stopping sharing removes all room media.
+
+The hosted app also has a shared media allowance across every board. Uploads or media access can pause when it is exhausted or a safety audit fails. Local boards remain available. See [cost controls](COST-CONTROLS.md) for the operator limits and shutdown behavior.
+
+For local collaboration development, run `pnpm build`, then `pnpm dev:sync` and open `http://127.0.0.1:8790` in two browser profiles. This uses local SQLite and R2 emulation, with no Cloudflare account needed. Alternatively run `pnpm dev` alongside `pnpm dev:sync`: Vite proxies `/api` and WebSockets to port 8790. Production hosting requires the bindings in [Deployment](DEPLOYMENT.md).
 
 ## Controls
 

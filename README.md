@@ -30,7 +30,8 @@
 - Customise keybindings, zoom speed, ink width, colour, and opacity.
 - Use light or dark mode, an optional grid, and optional snapping.
 - Export images, individual boards, or a complete library backup.
-- Work offline after the first online load. No account required.
+- Share a link to draw together, with live cursors and no sign-in.
+- Work on local boards offline after the first online load.
 
 ## Run locally
 
@@ -66,7 +67,7 @@ Change these in **Shortcuts**. [Full controls →](docs/GUIDE.md#controls)
 
 ## Storage
 
-Boards save to this browser profile and site address. They are **not backed up to a server**. Use **Export all boards** to keep a backup or move to another browser, device, or domain. [Storage and imports →](docs/GUIDE.md#your-boards)
+Local boards save to this browser profile and site address. **Share → Create shared copy** uploads a separate copy for collaboration; anyone with its link can edit. Shared boards are stored online. Use **Export all boards** to back up your local library, and export shared boards individually. [Storage and sharing →](docs/GUIDE.md#sharing)
 
 ---
 
