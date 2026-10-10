@@ -19,12 +19,26 @@ export class SharedSocket implements TLPersistentClientSocket<any, any> {
   private messages = new Set<(message: any) => void>()
   private statuses = new Set<(status: any) => void>()
   private listeners = new Set<() => void>()
+  reason?: string
   constructor(
     private uri: string,
     private checkAccess?: () => Promise<unknown>,
   ) {
     void this.connect()
     window.addEventListener('online', this.wake)
+    window.addEventListener('offline', this.sleep)
+  }
+  private sleep = () => {
+    if (this.stopped || this.connectionStatus === 'error') return
+    // A graceful WebSocket close can wait for a handshake when the network is gone.
+    // Detach it immediately so the UI and pending-edit guard reflect the real state.
+    this.generation++
+    clearTimeout(this.timer)
+    const old = this.ws
+    this.ws = undefined
+    old?.close()
+    this.pending.clear()
+    this.status('offline')
   }
   private wake = () => {
     if (this.connectionStatus === 'offline') this.restart()
@@ -58,19 +72,25 @@ export class SharedSocket implements TLPersistentClientSocket<any, any> {
     }
   }
   private status(status: 'online' | 'offline' | 'error', reason?: string) {
+    this.reason = reason
     this.state.set(status)
     this.statuses.forEach((fn) => fn({ status, reason }))
     this.emit()
   }
   private async connect() {
     if (this.stopped) return
+    if (!navigator.onLine) {
+      this.status('offline')
+      return
+    }
     const generation = ++this.generation
     try {
       await this.checkAccess?.()
     } catch (error) {
       if (this.stopped || generation !== this.generation) return
-      if ((error as { status?: number }).status === 404) {
-        this.status('error', 'FORBIDDEN')
+      const code = (error as { status?: number }).status
+      if (code === 404 || code === 410 || code === 429) {
+        this.status('error', code === 429 ? 'RATE_LIMITED' : 'FORBIDDEN')
         return
       }
       this.status('offline')
@@ -147,6 +167,7 @@ export class SharedSocket implements TLPersistentClientSocket<any, any> {
     this.stopped = true
     clearTimeout(this.timer)
     window.removeEventListener('online', this.wake)
+    window.removeEventListener('offline', this.sleep)
     this.ws?.close()
   }
   async flush() {

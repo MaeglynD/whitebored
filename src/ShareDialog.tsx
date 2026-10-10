@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { ArrowUpRight, Check, Copy, Link2, Loader2, ShieldCheck, Users, X } from 'lucide-react'
 import type { CanvasHandle } from './EditorCanvas'
@@ -19,6 +19,8 @@ export function ShareDialog({
   onClose,
   onRevoked,
   onOpen,
+  people,
+  onStop,
 }: {
   board: Board
   canvas: () => CanvasHandle | null
@@ -26,6 +28,8 @@ export function ShareDialog({
   onClose: () => void
   onRevoked?: () => void
   onOpen?: (link: SharedLink) => void
+  people?: ReactNode
+  onStop?: () => Promise<void>
 }) {
   const [link, setLink] = useState(
     () => existing || sharedLinks().find((x) => x.sourceId === board.id),
@@ -71,7 +75,9 @@ export function ShareDialog({
               </Dialog.Title>
               <Dialog.Description className="dialog-description">
                 {confirm
-                  ? 'This link will stop working for everyone, including you. Save a copy first to keep the latest shared changes.'
+                  ? existing
+                    ? 'Everyone will be disconnected. We’ll save the latest board and its media on this device, then continue here as a local board.'
+                    : 'Open the shared board first to keep its latest changes when you stop sharing.'
                   : revoked
                     ? 'The link has been revoked. Local copies are unchanged.'
                     : link
@@ -137,6 +143,12 @@ export function ShareDialog({
                     Keep this link private to your group. Edits are saved online; changes to your
                     original local board stay separate.
                   </p>
+                  {people}
+                  {link.expiresAt && (
+                    <p className="share-note">
+                      Available until {new Date(link.expiresAt).toLocaleString()}.
+                    </p>
+                  )}
                   {link.ownerKey && (
                     <>
                       <div className="share-owner">
@@ -145,7 +157,7 @@ export function ShareDialog({
                         <button
                           className="text-button danger"
                           disabled={busy}
-                          onClick={() => setConfirm(true)}
+                          onClick={() => (existing ? setConfirm(true) : onOpen?.(link))}
                         >
                           Stop sharing
                         </button>
@@ -161,7 +173,7 @@ export function ShareDialog({
                 <>
                   <p className="share-note">
                     The copy and its images are uploaded to Whitebored. Up to 20 people can connect.
-                    Media: 10 MB per file, 100 MB per board.
+                    Media: 10 MB per file, 100 MB per board. Shared links last 7 days.
                   </p>
                   <button
                     className="primary full"
@@ -176,7 +188,10 @@ export function ShareDialog({
                         editor.updateInstanceState({ isReadonly: true })
                         try {
                           await handle.flush()
-                          setLink(await createSharedCopy(editor, board))
+                          const created = await createSharedCopy(editor, board)
+                          setLink(created)
+                          sessionStorage.setItem('whitebored-open-share', created.id)
+                          onOpen?.(created)
                         } finally {
                           editor.updateInstanceState({ isReadonly: readonly })
                         }
@@ -200,6 +215,10 @@ export function ShareDialog({
                 disabled={busy}
                 onClick={() =>
                   void work(async () => {
+                    if (onStop) {
+                      await onStop()
+                      return
+                    }
                     await roomRequest(link, '', { method: 'DELETE' }, true)
                     forgetLink(link.id)
                     setRevoked(true)

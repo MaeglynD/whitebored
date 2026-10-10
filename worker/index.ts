@@ -1,26 +1,50 @@
 import { DurableObject } from 'cloudflare:workers'
 import { SharedRoom } from './room'
-import { MediaBudget } from './media'
-import { HttpError, digest, json, key, readJson, uuid } from './security'
-export { SharedRoom, MediaBudget }
+import { CappedMedia } from './capped-media'
+import { HttpError, digest, json, key, readJson, roomId, ROOM_LIFETIME } from './security'
+export { SharedRoom, CappedMedia }
 
 export interface Env {
   ASSETS: Fetcher
   ROOMS: DurableObjectNamespace<SharedRoom>
   SHARE_LIMITS: DurableObjectNamespace<ShareLimits>
-  MEDIA: R2Bucket
-  MEDIA_BUDGET: DurableObjectNamespace<MediaBudget>
+  CAPPED_MEDIA: DurableObjectNamespace<CappedMedia>
+  SQL_MEDIA_MAX_BYTES?: string
   SHARING_ENABLED: string
-  MEDIA_MAX_BYTES?: string
-  MEDIA_MAX_WRITES?: string
-  MEDIA_MAX_READS?: string
 }
 
 // A small, persistent quota prevents anonymous creation from allocating unbounded rooms.
 export class ShareLimits extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env)
+    ctx.storage.sql.exec(
+      'CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, expires INTEGER NOT NULL)',
+    )
+  }
+  async cleanupExpired() {
+    // Alarms have a finite retry budget. Revisit admitted rooms after a daily quota resets,
+    // so a failed expiry alarm cannot strand media or document storage permanently.
+    const sql = this.ctx.storage.sql
+    const rooms = [...sql.exec<{ id: string }>('SELECT id FROM rooms LIMIT 100')]
+    for (const { id } of rooms) {
+      if (await this.env.ROOMS.getByName(id).cleanupExpired())
+        sql.exec('DELETE FROM rooms WHERE id = ?', id)
+    }
+  }
   async fetch(request: Request) {
-    const identity = await request.text()
+    const sql = this.ctx.storage.sql
+    if (request.method === 'DELETE') {
+      const id = await request.text()
+      sql.exec('DELETE FROM rooms WHERE id = ?', id)
+      return json({ ok: true })
+    }
+    const { identity, id } = await request.json<{ identity: string; id: string }>()
     return this.ctx.blockConcurrencyWhile(async () => {
+      if (sql.exec<{ n: number }>('SELECT count(*) AS n FROM rooms').one().n >= 100)
+        return json(
+          { error: 'All 100 shared-board spaces are in use. Try again after a session ends.' },
+          429,
+        )
       const day = Math.floor(Date.now() / 86400000)
       const counts = await this.ctx.storage.get<{
         day: number
@@ -28,7 +52,7 @@ export class ShareLimits extends DurableObject<Env> {
         ips: Record<string, number>
       }>('quota')
       const quota = counts?.day === day ? counts : { day, total: 0, ips: {} }
-      if (quota.total >= 500 || (quota.ips[identity] || 0) >= 20)
+      if (quota.total >= 100 || (quota.ips[identity] || 0) >= 10)
         return json(
           { error: 'Shared-board creation limit reached. Please try again tomorrow.' },
           429,
@@ -36,6 +60,7 @@ export class ShareLimits extends DurableObject<Env> {
       quota.total++
       quota.ips[identity] = (quota.ips[identity] || 0) + 1
       await this.ctx.storage.put('quota', quota)
+      sql.exec('INSERT INTO rooms VALUES (?, ?)', id, Date.now() + ROOM_LIFETIME)
       return json({ ok: true })
     })
   }
@@ -43,7 +68,7 @@ export class ShareLimits extends DurableObject<Env> {
 
 export default {
   async scheduled(_event: ScheduledController, env: Env) {
-    if (env.SHARING_ENABLED === 'true') await env.MEDIA_BUDGET.getByName('media-budget-v1').audit()
+    await env.SHARE_LIMITS.getByName('creation').cleanupExpired()
   },
   async fetch(request: Request, env: Env): Promise<Response> {
     const response = await handle(request, env)
@@ -69,18 +94,20 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (origin && origin !== url.origin && origin !== 'folio://app')
       throw new HttpError(403, 'This request must come from Whitebored.')
     if (request.method === 'OPTIONS') return new Response(null, { status: 204 })
+    if (url.pathname === '/api/capacity' && request.method === 'GET')
+      return json(await env.CAPPED_MEDIA.getByName('media-sql-v1').status())
     if (url.pathname === '/api/rooms' && request.method === 'POST') {
       const input = await readJson(request, 2048)
       if (typeof input.title !== 'string' || input.title.length > 200)
         throw new HttpError(400, 'A board title is required (up to 200 characters).')
       const ip = await digest(request.headers.get('CF-Connecting-IP') || 'local')
+      const id = key(16)
       const quota = await env.SHARE_LIMITS.getByName('creation').fetch('https://limits/', {
         method: 'POST',
-        body: ip,
+        body: JSON.stringify({ identity: ip, id }),
       })
       if (!quota.ok) return quota
-      const id = crypto.randomUUID(),
-        editKey = key(),
+      const editKey = id,
         ownerKey = key()
       const room = env.ROOMS.getByName(id)
       const response = await room.fetch('https://room/internal/create', {
@@ -94,10 +121,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
         }),
       })
       if (!response.ok) return response
-      return json({ id, editKey, ownerKey }, 201)
+      return json({ id, editKey, ownerKey, expiresAt: Date.now() + ROOM_LIFETIME }, 201)
     }
     const match = url.pathname.match(/^\/api\/rooms\/([^/]+)(\/.*)?$/)
-    if (!match || !uuid.test(match[1]) || (match[2] || '').startsWith('/internal'))
+    if (!match || !roomId.test(match[1]) || (match[2] || '').startsWith('/internal'))
       throw new HttpError(404, 'Shared board not found.')
     // Only the public router can create a room. Request bodies/headers cannot select an owner.
     url.pathname = match[2] || '/'

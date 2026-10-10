@@ -2793,3 +2793,129 @@ kbd {
     max-width: calc(100vw - 180px);
   }
 }
+.whitebored-cursor {
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.collaborator-name {
+  position: absolute;
+  top: 21px;
+  left: 12px;
+  color: white;
+  padding: 3px 7px;
+  border-radius: 3px 7px 7px 7px;
+  font:
+    500 11px/1.4 'DM Sans',
+    sans-serif;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 4px #0002;
+}
+.presence-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 23px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  text-transform: uppercase;
+  border: 2px solid var(--surface);
+}
+.board-controls button.shared-people {
+  width: auto;
+  padding: 0 6px;
+  gap: 3px;
+}
+.shared-people .presence-avatar + .presence-avatar {
+  margin-left: -10px;
+}
+.shared-people > span:last-child {
+  margin-left: 4px;
+  font-size: 11px;
+}
+.share-people-panel {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.identity-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.share-people-panel .shared-name {
+  width: 100%;
+}
+.cursor-colors {
+  display: flex;
+  gap: 9px;
+  padding: 12px 0 18px;
+}
+.cursor-colors button {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  border: 2px solid transparent;
+}
+.cursor-colors button[aria-pressed='true'] {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.roster-heading {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin: 5px 0 12px;
+}
+.roster-heading > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.presence-roster {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 180px;
+  overflow: auto;
+}
+.presence-roster li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 35px;
+  font-size: 12px;
+}
+.presence-roster li > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.presence-roster small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.presence-roster li > small:last-child {
+  margin-left: auto;
+  padding-left: 8px;
+}
+@media (max-width: 650px) {
+  .shared-heading {
+    max-width: calc(100vw - 155px);
+  }
+  .shared-title {
+    max-width: 95px;
+    padding: 0 3px;
+  }
+  .shared-people .presence-avatar:not(:first-child) {
+    display: none;
+  }
+}

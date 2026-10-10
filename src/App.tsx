@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { ShareDialog } from './ShareDialog'
 import { sharedLinks, shareUrl, type SharedLink } from './sharing'
+import { navigateWorkspace, sharePath } from './shareLinks'
 import { Select } from './Select'
 import { BoardThumbnail } from './BoardThumbnail'
 import { exportLibrary, parseBoardFiles } from './backups'
@@ -667,7 +668,7 @@ export function App() {
                       onClick={(e) => {
                         e.preventDefault()
                         void transition(async () => {
-                          location.href = shareUrl(link)
+                          navigateWorkspace(sharePath(link))
                         })
                       }}
                     >
@@ -850,7 +851,7 @@ export function App() {
           canvas={() => canvas.current}
           onOpen={(link) => {
             void transition(async () => {
-              location.href = shareUrl(link)
+              navigateWorkspace(sharePath(link))
             })
           }}
           onClose={() => {

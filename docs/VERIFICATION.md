@@ -1,5 +1,20 @@
 # Verification
 
+## Multiplayer update — 10 October 2026
+
+- 36 unit/emulator tests pass, including 20-session admission, session expiry/freeze authorization, missed-expiry-alarm recovery, per-board file counts, atomic global media capacity, per-network upload quotas, immutable chunked storage, and short/legacy URL parsing.
+- Eight collaboration browser tests pass: independent concurrent edits/undo, authorization, images and editable exports, offline reconciliation, mobile dark layout, identities/roster/disconnect notices, rendered cursor interpolation, owner stop-to-local flow, local-save failure/retry, and recovery with media after reloading an interrupted stop. One scenario covers multiple checks.
+- All 31 existing local-board browser tests and the production offline test pass. TypeScript, production build and license-configuration checks pass.
+- Fresh isolated browsers on the live HTTPS deployment verify drawing and image synchronization, reload, participant counts, unauthorized access denial, owner revocation and both participants continuing locally. The current Electron runtime verifies sharing through the production API and returning to its local `folio://app/` origin. This does not constitute a new signed installer release.
+- `tests/capacity.test.ts` measures 1,200 SQLite row writes for 300 single-shape commits in the installed tldraw 5.4.2 adapter. The [capacity forecast](MULTIPLAYER-CAPACITY.md) uses this measured write amplification; it is not a production load test.
+- Desktop and narrow dark sharing panels were rendered and inspected. Test profiles contain synthetic boards only.
+
+The local Workers emulator sometimes logs a request-stream cancellation warning when intentionally rejecting an unauthorized upload before reading its body. Expected denial responses and subsequent valid requests pass; the fresh production browser checks report no JavaScript errors. This is recorded rather than described as a warning-free run.
+
+The app's final deployment has no R2 binding or access code. Free-plan enforcement remains a provider/account setting, not something unit tests can establish. The owner confirmed Workers Free; no paid subscription was purchased or enabled.
+
+## Earlier application verification
+
 Checked on Windows on 9 October 2026. Version 0.5 adds direct text-wrap resizing, independent grid/snapping, menu theme switching, and multi-file/library backups. The Whitebored rename updates the public identity while retaining existing storage and backup identifiers.
 
 ## Automated checks
@@ -23,6 +38,6 @@ Commands: `pnpm test`, `pnpm test:e2e`, `pnpm test:offline`, `pnpm test:desktop`
 - The large-board test is a local Chromium smoke test, not a guarantee of frame rate, arbitrary drawing complexity, or low-end-device performance.
 - The current unsigned native preview is for local evaluation. Public deployment requires an appropriate tldraw license; native releases also need signing/notarization and a defined update process.
 - Browser storage is not an external backup. Very recent edits can be lost if the process terminates before the save transaction completes. Save errors remain visible and block board transitions until resolved.
-- Cloud sync, collaboration, account recovery, and a native automatic updater are not implemented.
+- Shared collaboration is implemented; account-based login/recovery and a native automatic updater are not. Shared rooms are not a durable offline cache.
 
 No real boards from the original `whiteboard` repository were edited or used in the tests.

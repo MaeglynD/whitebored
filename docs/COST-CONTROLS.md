@@ -1,46 +1,60 @@
-# Cost controls
+# Spending boundary and operating limits
 
-Whitebored is configured for **Workers Free + R2 Standard**. The owner confirmed Workers Free on 10 October 2026; the R2 account had no buckets before Whitebored setup. Keep Workers Free: its compute and SQLite Durable Object quotas stop excess use rather than creating an overage bill. A paid Workers plan would remove that protection.
+Reviewed 10 October 2026. The supported capped configuration is **Workers Free, SQLite Durable Objects, and Workers Static Assets**. Shared media uses bounded SQLite blobs. The final production configuration has no R2 binding or R2 audit cron.
 
-## R2 limits
+Cloudflare states that Free-plan Durable Object operations fail when their quotas are exhausted; daily quotas reset at 00:00 UTC. This provider-enforced boundary is why this deployment stays on Free. It does not depend on our code polling a bill quickly enough. [Cloudflare pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/)
 
-Every media read and upload passes through one persistent `MediaBudget` Durable Object. It reserves allowance **before** calling R2. Reservations are atomic across all boards, including concurrent uploads, and survive Worker restarts. Failed R2 operations still consume the reservation because Cloudflare may count them.
+This is conditional on the account remaining on **Workers Free**. An administrator upgrading the account changes that boundary for this app too. Domain renewals, licenses, other projects, and separately enabled products are outside it. The current CLI cannot independently inspect the billing subscription; the account owner confirmed Free. Budget notifications **do not cap charges**. [Budget alerts](https://developers.cloudflare.com/billing/manage/budget-alerts/)
 
-| Resource                                  | Whitebored ceiling          | R2 Standard free allowance      |
-| ----------------------------------------- | --------------------------- | ------------------------------- |
-| Stored media, across all boards           | 2 GB (decimal)              | 10 GB-month per month           |
-| Stored objects                            | 10,000                      | No separate object-count charge |
-| Class A operations, including audit lists | 50,000 per rolling 32 days  | 1 million per month             |
-| Class B operations                        | 500,000 per rolling 32 days | 10 million per month            |
+## Why R2 was removed
 
-The 32-day window avoids depending on the account's billing anniversary. The bucket stays private, with no public domain, `r2.dev` endpoint, S3 credentials in the app, or second Worker accessing it. Media stays in Standard storage; no paid transformations, replication, events, or logging are configured. The checked-in ceilings cannot be increased by environment variables; test overrides can only lower them.
+The previous implementation reserved R2 operations in a durable ledger before access and audited the bucket periodically. That was better than a delayed billing alarm, but remained application code protecting a metered product. Revoking a deployment API token would not disable a deployed Worker's R2 binding.
 
-This targets **$0 usage charges under the current free allowances**. It is an application safeguard, not a Cloudflare contractual spending cap. Other projects using this account, administrator uploads, changing the code or plan, and future pricing changes are outside its protection. Recheck the shared free allowance before using R2 for another project. R2 rounds billable operation usage up to a million, so even a small overage need not cost only pennies.
+The replacement has no object-storage calls. The R2 binding, access code, quota namespace and audit cron were removed. No legacy-data migration is required for this development deployment; the owner explicitly confirmed prior boards do not need preserving. The old bucket was empty when retired. Do not restore an R2-dependent release as an emergency rollback without reviewing its costs.
 
-## Automatic shutdown
+## Application limits
 
-A Cloudflare Cron Trigger runs every 15 minutes. It audits the private R2 bucket against the reserved objects and sizes. Untracked objects, unexpected sizes, or an excessive total **latch media access off** in durable storage. Normal redeployment does not clear this latch. Audit list requests themselves consume the Class A budget.
+These are capacity and abuse controls, **not the billing boundary**. Binary units below are exact; the compact UI uses “MB”. They apply server-side to browser and native clients.
 
-If the audit cannot run successfully for an hour, media access stops until an audit succeeds. Quota checks still run on every request; they do not wait for this scheduled check or Cloudflare billing reports. When a limit is reached, media operations return an error before the next R2 operation. Storage exhaustion blocks uploads. Operation limits expire as usage leaves the rolling window.
+| Resource                     | Limit                                                | On reaching it                                   |
+| ---------------------------- | ---------------------------------------------------- | ------------------------------------------------ |
+| Connections to one board     | 20, including owner and extra tabs                   | Additional joins refused                         |
+| Shared-board lifetime        | 7 days from creation                                 | Link expires; server data scheduled for deletion |
+| Incomplete sharing draft     | 1 hour                                               | Abandoned data removed                           |
+| New boards per network       | 10 per UTC day                                       | Creation refused until the next day              |
+| New boards across deployment | 100 per UTC day; 100 admitted rooms awaiting cleanup | Creation refused                                 |
+| Document                     | 8 MiB, 20,000 records, 512,000 bytes per record      | Oversized edits rejected with a notification     |
+| One media file               | 10 MiB                                               | Upload refused                                   |
+| One board's media            | 100 MiB or 100 files                                 | Upload refused                                   |
+| All shared media             | 512 MiB or 5,000 files                               | Upload refused until space is released           |
+| One network's uploads        | 100 MiB or 100 files per UTC day, across all boards  | Upload refused                                   |
+| Concurrent uploads           | 2 per room and 2 across the media service            | Retryable busy response                          |
+| One connection's traffic     | 120 messages/second; 1 MiB per message               | Connection closed                                |
 
-Existing local boards remain usable. Document collaboration can continue when only media is paused; it remains under Workers Free quotas. At provider compute/storage quotas, collaboration may also become unavailable. Keep unsynced shared tabs open or use **Save local copy**. Cleanup remains permitted by the media guard: owner revocation deletes known media using R2's free delete operations.
+Creation and upload identities are hashes of Cloudflare's connecting-IP header. **These are network limits, not verified person limits**: people behind one router share them; someone changing IP can evade them. Deployment totals and provider Free quotas remain independent boundaries. Without sign-in, a reliable “one person” quota is not possible.
 
-Cloudflare Workers use an R2 **binding**, not a billing API key. Revoking a deployment token would not disable an already deployed binding. The guard therefore stops the actual R2 calls.
+Pre-upgrade rooms receive seven days on first activation. They are not retroactively entered in the new 100-room admission registry; their per-room limits and provider quotas still apply. Expiry prevents access immediately. Physical cleanup can be delayed if a daily write quota is exhausted. An hourly job revisits the admission registry after quotas recover; slots are released only after cleanup succeeds. This prevents exhausted alarm retries from permanently stranding files. [Alarm retry behavior](https://developers.cloudflare.com/durable-objects/api/alarms/)
 
-## Emergency shutdown
+Media is immutable. Deleting an image shape keeps its file for undo and occupies capacity until the session ends or expires. Room deletion releases its media capacity. SQLite chunks are 512 KiB, below the documented row limit. Counters update atomically with data, so simultaneous uploads cannot both spend the same remaining space. [SQLite limits](https://developers.cloudflare.com/durable-objects/platform/limits/)
 
-Set `SHARING_ENABLED` to `"false"` in `wrangler.jsonc`, then deploy the change. This disables the collaboration API while keeping the static app and local boards available. Existing sockets close when they next send application messages on the updated Worker. To deploy an immediate override from a logged-in machine:
+## When something stops working
 
-```sh
-pnpm exec wrangler deploy --var SHARING_ENABLED:false
-```
+- A full room affects new joins; existing participants can continue.
+- Full media storage blocks uploads, not existing drawing or media reads by design.
+- Provider request/read/write/duration exhaustion can affect **every shared board on the account**. Daily resources resume at the UTC reset; full storage needs cleanup.
+- Keep disconnected tabs open. Unacknowledged edits are only in memory; save a local copy or editable export when possible. Do not reload an unsynced tab to troubleshoot.
+- Private local boards use IndexedDB and the static app independently of the collaboration API. A first visit still needs the static app to be reachable.
 
-Also commit the configuration change before the next automatic deployment, which otherwise restores the checked-in value. This does not delete stored boards. Stored media remains below the app's 2 GB ceiling. It does not disable unrelated Workers or alter account billing.
+Owner **Stop sharing** waits for pending edits, freezes the final server document, saves it locally with media, then revokes the link. Reloading after an interrupted freeze offers owner recovery. Guests can keep their current document and already-loaded media. A guest who never received a file cannot recover it after revocation; save important copies before the owner ends a session.
 
-An audit latch requires investigation of the bucket and ledger before manually clearing `media_budget_state.halted` in the **MediaBudget Durable Object's SQL explorer**. Never reset the ledger, rename `media-budget-v1`, or create a fresh quota namespace while retaining existing media: doing so loses the reservations. The initial audit rejects an untracked nonempty bucket, but it cannot reconstruct historical operation counts.
+Normal disconnects update the roster immediately. Silent network loss is detected after approximately 90–120 seconds using heartbeat timestamps and a 30-second check. The roster counts connections, not unique humans.
 
-## Verification
+## Operator actions
 
-`pnpm test` exercises the production guard in Cloudflare's local emulator: concurrent uploads at the storage ceiling, operation exhaustion, rolling-window expiry, stale audits, persistent shutdown after an audit mismatch, and deletion while paused. `pnpm test:sharing` checks two independent browsers, authorization, revocation, media portability, reconnection, and mobile layout. No test spends production R2 allowance.
+`GET /api/capacity` exposes aggregate media usage and capacity without board IDs or keys. Do not poll rapidly: monitoring consumes requests too. It is not a billing dashboard.
 
-References: [Workers Free limits](https://developers.cloudflare.com/workers/platform/limits/), [Durable Objects Free behavior](https://developers.cloudflare.com/durable-objects/platform/pricing/), [R2 pricing](https://developers.cloudflare.com/r2/pricing/), [budget alerts do not cap usage](https://developers.cloudflare.com/billing/manage/budget-alerts/), [Worker bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/).
+To pause collaboration, set `SHARING_ENABLED` to `"false"` in `wrangler.jsonc` and deploy. New API calls fail; existing sockets close when they next send application traffic. Local boards remain available. The final configuration does not need a billing monitor or billing API permissions.
+
+Before changing plans or adding paid bindings, review this boundary again. Workers Free does not cap separately metered products. Tests check behavior, but cannot promise that future code or account changes preserve today's configuration.
+
+For forecasts and a higher-capacity fixed-price option, see [Multiplayer capacity and hosting](MULTIPLAYER-CAPACITY.md).

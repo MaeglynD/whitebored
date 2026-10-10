@@ -1,21 +1,22 @@
 # Deploy Whitebored
 
-Whitebored serves a Vite app with Cloudflare Workers Static Assets. Private boards and media stay in the user's IndexedDB. Optional shared copies use a Worker API, one SQLite Durable Object per room, and a private R2 media bucket.
+Whitebored serves a Vite app with Cloudflare Workers Static Assets. Private boards and media stay in the user's IndexedDB. Shared copies use a Worker API, one SQLite Durable Object per room, and a bounded SQLite media store.
 
 **Live app:** [whitebored.app](https://whitebored.app). The current deployment uses a tldraw trial that expires **17 January 2027**; replace it with a suitable hobby or other active key before that date.
 
 ## Cloudflare
 
-`wrangler.jsonc` connects the `whitebored` Worker to `whitebored.app`; Cloudflare manages DNS and HTTPS. Static requests use Static Assets; `/api/*` runs the collaboration Worker. Shared rooms use `ROOMS`, creation quotas use `SHARE_LIMITS`, and the global media guard uses `MEDIA_BUDGET`. All three are SQLite Durable Objects. Only the media guard accesses `MEDIA` (R2 bucket `whitebored-media`).
+`wrangler.jsonc` connects the `whitebored` Worker to `whitebored.app`; Cloudflare manages DNS and HTTPS. Static requests use Static Assets; `/api/*` runs the collaboration Worker. `ROOMS`, `SHARE_LIMITS`, and `CAPPED_MEDIA` are SQLite Durable Objects. The final configuration has no R2 binding or code; migration `v3-remove-r2-budget` retires the old quota namespace.
 
 Before the first deployment with sharing:
 
-1. Keep the account on **Workers Free**. On this plan, Workers and SQLite Durable Objects fail at their free quotas instead of billing excess usage. Do not upgrade without revisiting the cost controls below. Enable **Storage & databases → R2 → Overview**; R2's subscription is separate from the Workers plan.
-2. Run `pnpm exec wrangler r2 bucket create whitebored-media`. Keep the bucket private: no public domain, public development URL or CORS rules are needed.
-3. Ensure the deployment identity can deploy Workers/Durable Objects and read R2 bucket configuration. The app accesses R2 through its binding, not an embedded API token.
-4. Run unit, sharing and browser tests, then deploy. Do not push a production auto-deploy branch with the new binding until the bucket exists.
+1. Keep the account on **Workers Free**. Its quotas stop excess operations instead of billing overages. Do not upgrade without reviewing the spending boundary.
+2. Ensure the deployment identity can deploy Workers, Durable Objects, and the custom domain. No R2 signup or bucket is needed for a new deployment.
+3. Run unit, sharing, browser and offline tests, then deploy. Preserve the migration tags and stable object names on existing deployments.
 
-The deployment uses quotas checked before each R2 operation plus a scheduled audit. See [cost controls and emergency shutdown](COST-CONTROLS.md). These controls cover Whitebored's code and private bucket, not other projects or direct uploads made by an account administrator. R2's free allowance is shared across the account. Existing local-only boards incur no collaboration storage or API use.
+See [cost controls and emergency shutdown](COST-CONTROLS.md) and [capacity measurements](MULTIPLAYER-CAPACITY.md). Free is intentionally limited: continuous collaborative drawing can exhaust daily database writes quickly. Private boards incur no collaboration API/storage usage.
+
+This is a development upgrade: previous R2-backed boards are not preserved, as requested by the owner. The final configuration needs no R2 signup, bucket or API token. Its hourly cron retries expired-room cleanup independently of the room alarms. Do not apply its namespace-deletion migration to a separate production installation that needs its old data.
 
 With Node.js 24 and the pinned pnpm version:
 
@@ -79,7 +80,7 @@ Browser storage belongs to an origin. To move boards from the [original address]
 
 ## Analytics
 
-No analytics script is included. Start with Cloudflare's built-in traffic metrics. If visit analytics become useful, [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/about/) is a free option, but integrate it deliberately: board titles and shared-link fragments must not be sent as analytics data. The script CSP requires an explicit change before a browser beacon can run. Do not enable request logging that captures WebSocket query keys or Authorization headers.
+No analytics script is included. Start with Cloudflare's built-in traffic metrics. If visit analytics become useful, [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/about/) is a free option, but integrate it deliberately: board titles and shared-link paths must not be sent as analytics data. The script CSP requires an explicit change before a browser beacon can run. Do not enable logging that records share paths, WebSocket query keys or Authorization headers. Shared URLs contain a bearer capability; `Referrer-Policy: no-referrer` prevents forwarding it to other sites.
 
 The tldraw trial has its own limited license telemetry, described in [its licensing documentation](https://tldraw.dev/community/license#data-collection). This is separate from app analytics.
 

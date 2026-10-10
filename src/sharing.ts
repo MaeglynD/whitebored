@@ -1,6 +1,7 @@
 import { getSnapshot, serializeTldrawJson, type Editor, type TLAssetStore } from 'tldraw'
 import { backupMetadata, parseBoardFiles } from './backups'
 import { importBoards, type Board } from './storage'
+import { parseSharePath, sharePath } from './shareLinks'
 
 export interface SharedLink {
   id: string
@@ -9,18 +10,21 @@ export interface SharedLink {
   title: string
   sourceId?: string
   legacy?: boolean
+  expiresAt?: number
 }
 const storageKey = 'whitebored-shared-links-v1'
-const uuid = '[0-9a-f-]{36}'
-export function parseSharedLink(hash: string): SharedLink | null {
-  const match = hash.match(new RegExp(`^#/s/(${uuid})/([A-Za-z0-9_-]{43})$`, 'i'))
-  return match ? { id: match[1], editKey: match[2], title: 'Shared board' } : null
-}
+export const parseSharedLink = parseSharePath
 export function sharedLinks(): SharedLink[] {
   try {
     const result = JSON.parse(localStorage.getItem(storageKey) || '[]')
     return Array.isArray(result)
-      ? result.filter((x) => parseSharedLink(`#/s/${x.id}/${x.editKey}`))
+      ? result.filter(
+          (x) =>
+            x &&
+            typeof x.id === 'string' &&
+            typeof x.editKey === 'string' &&
+            parseSharedLink(sharePath(x)),
+        )
       : []
   } catch {
     return []
@@ -42,7 +46,7 @@ export function forgetLink(id: string) {
 }
 export const sharingOrigin = () =>
   location.protocol === 'folio:' ? 'https://whitebored.app' : location.origin
-export const shareUrl = (link: SharedLink) => `${sharingOrigin()}/#/s/${link.id}/${link.editKey}`
+export const shareUrl = (link: SharedLink) => `${sharingOrigin()}${sharePath(link)}`
 export class SharingError extends Error {
   constructor(
     public status: number,
@@ -111,6 +115,21 @@ export function sharedAssets(link: SharedLink) {
   }
   return {
     assets,
+    // Keep every asset available for a local copy, including off-screen media.
+    // Resolution is deduplicated for the life of this room, so this does not reread loaded images.
+    preload(editor: Editor) {
+      return Promise.all(
+        editor.getAssets().map((asset) =>
+          assets.resolve!(asset, {
+            screenScale: 1,
+            steppedScreenScale: 1,
+            dpr: 1,
+            networkEffectiveType: '4g',
+            shouldResolveToOriginal: true,
+          }),
+        ),
+      )
+    },
     dispose() {
       disposed = true
       for (const url of urls.values()) void url.then(URL.revokeObjectURL).catch(() => {})
@@ -139,6 +158,44 @@ export async function saveSharedCopy(editor: Editor, board: Board) {
     { type: 'application/json' },
   )
   return (await importBoards(await parseBoardFiles([file])))[0]
+}
+/** Recover an owner's final frozen snapshot even after a reload interrupted Stop sharing. */
+export async function recoverSharedCopy(link: SharedLink) {
+  const snapshot = await (await roomRequest(link, '/freeze', { method: 'POST' }, true)).json()
+  const records: any[] = Object.values(snapshot.store)
+  for (const record of records) {
+    if (record.typeName !== 'asset' || !record.props.src) continue
+    const prefix = `asset:shared:${link.id}:`
+    if (!record.props.src.startsWith(prefix))
+      throw new Error('An image in this board cannot be recovered.')
+    const blob = await (
+      await roomRequest(link, `/assets/${record.props.src.slice(prefix.length)}`)
+    ).blob()
+    record.props.src = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(new Error('Could not save this board’s media.'))
+      reader.readAsDataURL(blob)
+    })
+  }
+  const file = new File(
+    [
+      JSON.stringify({
+        format: 'folio-canvas',
+        version: 1,
+        title: link.title,
+        legacy: link.legacy,
+        document: { tldrawFileFormatVersion: 1, schema: snapshot.schema, records },
+      }),
+    ],
+    `${link.title}.canvas`,
+    { type: 'application/json' },
+  )
+  const saved = (await importBoards(await parseBoardFiles([file])))[0]
+  localStorage.setItem('folio-active', saved.id)
+  await roomRequest(link, '', { method: 'DELETE' }, true)
+  forgetLink(link.id)
+  return saved
 }
 export async function createSharedCopy(editor: Editor, board: Board): Promise<SharedLink> {
   editor.complete()

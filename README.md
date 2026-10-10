@@ -67,7 +67,7 @@ Change these in **Shortcuts**. [Full controls →](docs/GUIDE.md#controls)
 
 ## Storage
 
-Local boards save to this browser profile and site address. **Share → Create shared copy** uploads a separate copy for collaboration; anyone with its link can edit. Shared boards are stored online. Use **Export all boards** to back up your local library, and export shared boards individually. [Storage and sharing →](docs/GUIDE.md#sharing)
+Local boards save to this browser profile and site address. **Share → Create shared copy** opens a separate online copy; anyone with its link can edit. Shared sessions last seven days. Use **Export all boards** to back up your local library, and export shared boards individually. [Storage and sharing →](docs/GUIDE.md#sharing) · [Hosted limits](docs/COST-CONTROLS.md)
 
 ---
 

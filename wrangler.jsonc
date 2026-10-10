@@ -5,7 +5,7 @@
   "compatibility_date": "2026-10-09",
   "workers_dev": true,
   "vars": { "SHARING_ENABLED": "true" },
-  "triggers": { "crons": ["*/15 * * * *"] },
+  "triggers": { "crons": ["5 * * * *"] },
   "routes": [{ "pattern": "whitebored.app", "custom_domain": true }],
   "assets": {
     "binding": "ASSETS",
@@ -17,9 +17,12 @@
     "bindings": [
       { "name": "ROOMS", "class_name": "SharedRoom" },
       { "name": "SHARE_LIMITS", "class_name": "ShareLimits" },
-      { "name": "MEDIA_BUDGET", "class_name": "MediaBudget" },
+      { "name": "CAPPED_MEDIA", "class_name": "CappedMedia" },
     ],
   },
-  "migrations": [{ "tag": "v1-sharing", "new_sqlite_classes": ["SharedRoom", "ShareLimits", "MediaBudget"] }],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "whitebored-media" }],
+  "migrations": [
+    { "tag": "v1-sharing", "new_sqlite_classes": ["SharedRoom", "ShareLimits", "MediaBudget"] },
+    { "tag": "v2-capped-media", "new_sqlite_classes": ["CappedMedia"] },
+    { "tag": "v3-remove-r2-budget", "deleted_classes": ["MediaBudget"] },
+  ],
 }

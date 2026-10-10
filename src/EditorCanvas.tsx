@@ -31,6 +31,7 @@ import { assetUrls, normalTheme, legacyTheme, shapeUtils, storeShapeUtils } from
 import { renderPreviews } from './previews'
 import type { Keymap } from './keymap'
 import type { useSync } from '@tldraw/sync'
+import { CollaboratorCursor } from './CollaboratorCursor'
 
 const overrides: TLUiOverrides = {
   tools(_editor, tools) {
@@ -43,6 +44,7 @@ const overrides: TLUiOverrides = {
   },
 }
 const components: TLComponents = {
+  CollaboratorCursor,
   Background: CanvasBackground,
   Grid: null,
   Toolbar: null,

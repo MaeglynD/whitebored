@@ -2,7 +2,11 @@ export const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024
 export const MAX_ASSET_BYTES = 10 * 1024 * 1024
 export const MAX_ROOM_BYTES = 100 * 1024 * 1024
 export const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-export const tokenPattern = /^[A-Za-z0-9_-]{43}$/
+export const tokenPattern = /^(?:[A-Za-z0-9_-]{43}|[A-Za-z0-9_-]{22})$/
+export const roomId =
+  /^(?:[A-Za-z0-9_-]{22}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i
+export const ROOM_LIFETIME = 7 * 86400000
+export const MAX_ROOM_ASSETS = 100
 export const mediaTypes = new Set([
   'image/png',
   'image/jpeg',
@@ -36,8 +40,8 @@ export async function digest(value: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
   return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('')
 }
-export function key() {
-  return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+export function key(bytes = 32) {
+  return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(bytes))))
     .replaceAll('+', '-')
     .replaceAll('/', '_')
     .replaceAll('=', '')

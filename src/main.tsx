@@ -9,22 +9,28 @@ const SharedWorkspace = lazy(() =>
   import('./SharedWorkspace').then((module) => ({ default: module.SharedWorkspace })),
 )
 function WorkspaceRouter() {
-  const [hash, setHash] = useState(location.hash)
+  const [path, setPath] = useState(location.hash || location.pathname)
   useEffect(() => {
     const changed = () => {
       if (!window.dispatchEvent(new Event('whitebored-before-navigate', { cancelable: true }))) {
-        history.replaceState(null, '', location.pathname + location.search + hash)
+        history.replaceState(null, '', path.startsWith('#') ? '/' + path : path)
         return
       }
-      setHash(location.hash)
+      setPath(location.hash || location.pathname)
     }
     window.addEventListener('hashchange', changed)
-    return () => window.removeEventListener('hashchange', changed)
-  }, [hash])
-  const link = parseSharedLink(hash)
+    window.addEventListener('popstate', changed)
+    window.addEventListener('whitebored-navigate', changed)
+    return () => {
+      window.removeEventListener('hashchange', changed)
+      window.removeEventListener('popstate', changed)
+      window.removeEventListener('whitebored-navigate', changed)
+    }
+  }, [path])
+  const link = parseSharedLink(path)
   return link ? (
     <Suspense fallback={<main className="launch">Opening shared board…</main>}>
-      <SharedWorkspace key={hash} link={link} />
+      <SharedWorkspace key={link.id} link={link} />
     </Suspense>
   ) : (
     <App />

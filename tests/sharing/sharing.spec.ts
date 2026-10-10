@@ -28,7 +28,8 @@ test('two independent people edit, see cursors, undo their own stroke, and reloa
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   const url = await share(page)
-  await page.getByRole('link', { name: 'Open shared board' }).click()
+  await expect(page).toHaveURL(/\/s\/[A-Za-z0-9_-]{22}$/)
+  await page.getByRole('button', { name: 'Close sharing' }).click()
   await expect(page.locator('.shared-label')).toHaveText('Shared')
   const otherContext = await browser.newContext()
   const other = await otherContext.newPage()
@@ -49,10 +50,6 @@ test('two independent people edit, see cursors, undo their own stroke, and reloa
   expect(errors).toEqual([])
   await otherContext.close()
   await page.getByRole('button', { name: 'Back to local boards', exact: true }).click()
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: 'Back to local boards', exact: true })
-    .click()
   await expect(canvasShapes(page)).toHaveCount(1)
 })
 test('wrong keys cannot read, edit, initialize, fetch media or revoke; owner revocation disconnects everyone', async ({
@@ -61,7 +58,8 @@ test('wrong keys cannot read, edit, initialize, fetch media or revoke; owner rev
   request,
 }) => {
   const url = await share(page)
-  const [, id, editKey] = new URL(url).hash.match(/^#\/s\/([^/]+)\/(.+)$/)!
+  const id = new URL(url).pathname.split('/').at(-1)!,
+    editKey = id
   const saved = await page.evaluate(
     () => JSON.parse(localStorage.getItem('whitebored-shared-links-v1')!)[0],
   )
@@ -93,11 +91,15 @@ test('wrong keys cannot read, edit, initialize, fetch media or revoke; owner rev
   await openShared(other, url)
   await other.getByRole('button', { name: 'Share board', exact: true }).click()
   await expect(other.getByRole('button', { name: 'Stop sharing' })).toHaveCount(0)
-  await other.getByRole('button', { name: 'Close sharing' }).click()
   await page.getByRole('button', { name: 'Stop sharing' }).click()
   await page.getByRole('button', { name: 'Stop sharing', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Sharing stopped' })).toBeVisible()
-  await expect(other.getByRole('heading', { name: 'Connection ended' })).toBeVisible()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.locator('.shared-label')).toHaveCount(0)
+  await expect(canvasShapes(page)).toHaveCount(1)
+  await expect(other.getByRole('heading', { name: 'This shared session has ended' })).toBeVisible()
+  await other.getByRole('button', { name: 'Keep a copy & continue' }).click()
+  await expect(other).toHaveURL(/\/$/)
+  await expect(canvasShapes(other)).toHaveCount(1)
   expect(
     (
       await request.get(`/api/rooms/${id}`, { headers: { Authorization: `Bearer ${editKey}` } })
@@ -160,10 +162,11 @@ test('image upload is shared, authenticated, portable on export, and denied afte
   expect(document.document.records.find((r: any) => r.typeName === 'asset').props.src).toMatch(
     /^data:image\/png/,
   )
-  expect(JSON.stringify(document)).not.toContain(new URL(url).hash.split('/').at(-1))
+  expect(JSON.stringify(document)).not.toContain(editKeyFrom(url))
   await menu(other, 'Save local copy')
   await expect(other.getByText('Saved a separate copy to your local boards.')).toBeVisible()
-  const [, id, editKey] = new URL(url).hash.match(/^#\/s\/([^/]+)\/(.+)$/)!
+  const id = editKeyFrom(url),
+    editKey = id
   expect(mediaRequests.length).toBeGreaterThan(0)
   expect((await request.get(mediaRequests[0])).status()).toBe(404)
   expect(
@@ -181,6 +184,11 @@ test('image upload is shared, authenticated, portable on export, and denied afte
   ).toBe(415)
   await page.getByRole('button', { name: 'Stop sharing' }).click()
   await page.getByRole('button', { name: 'Stop sharing', exact: true }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(canvasShapes(page)).toHaveCount(2)
+  await other.getByRole('button', { name: 'Keep a copy & continue' }).click()
+  await expect(other).toHaveURL(/\/$/)
+  await expect(canvasShapes(other)).toHaveCount(2)
   expect(
     (
       await request.get(mediaRequests[0], { headers: { Authorization: `Bearer ${editKey}` } })
@@ -193,7 +201,7 @@ test('offline edits reconnect without overwriting another person’s work', asyn
   browser,
 }) => {
   const url = await share(page)
-  await page.getByRole('link', { name: 'Open shared board' }).click()
+  await page.getByRole('button', { name: 'Close sharing' }).click()
   const context = await browser.newContext()
   await context.addInitScript(() => {
     const NativeWebSocket = window.WebSocket
@@ -253,4 +261,138 @@ test('a shared link works on a narrow dark screen and persists text edits', asyn
   await other.reload()
   await expect(other.locator('.tl-text-shape')).toContainText('Together on the same board')
   await context.close()
+})
+
+const editKeyFrom = (url: string) => new URL(url).pathname.split('/').at(-1)!
+
+test('a failed local save leaves the frozen session recoverable and Stop sharing can retry', async ({
+  page,
+  request,
+}) => {
+  const url = await share(page)
+  await expect(page).toHaveURL(/\/s\/[A-Za-z0-9_-]{22}$/)
+  await expect(page.locator('.shared-label')).toHaveText('Shared')
+  await page.evaluate(() => {
+    const original = IDBDatabase.prototype.transaction
+    IDBDatabase.prototype.transaction = function (...args: any[]) {
+      if (args[1] === 'readwrite') {
+        IDBDatabase.prototype.transaction = original
+        throw new DOMException('Test disk full', 'QuotaExceededError')
+      }
+      return original.apply(this, args as any)
+    }
+  })
+  await page.getByRole('button', { name: 'Stop sharing', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop sharing', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Test disk full')
+  const id = editKeyFrom(url)
+  expect(
+    (
+      await request.get(`/api/rooms/${id}`, { headers: { Authorization: `Bearer ${id}` } })
+    ).status(),
+  ).toBe(410)
+  await page.getByRole('button', { name: 'Stop sharing', exact: true }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(canvasShapes(page)).toHaveCount(1)
+  expect(
+    (
+      await request.get(`/api/rooms/${id}`, { headers: { Authorization: `Bearer ${id}` } })
+    ).status(),
+  ).toBe(404)
+})
+
+test('an owner can recover the final board and media after closing during stop-sharing', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Pen', exact: true })).toBeVisible()
+  const upload = page.waitForEvent('filechooser')
+  await menu(page, 'Add image or video')
+  await (await upload).setFiles('public/icon-192.png')
+  await expect(canvasShapes(page)).toHaveCount(1)
+  await page.getByRole('button', { name: 'Share board', exact: true }).click()
+  await page.getByRole('button', { name: 'Create shared copy', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Shared board link' })).toBeVisible()
+  const saved = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('whitebored-shared-links-v1')!)[0],
+  )
+  // Simulate closing after the authoritative freeze but before the local transaction.
+  await expect(page).toHaveURL(/\/s\/[A-Za-z0-9_-]{22}$/)
+  await expect(page.locator('.shared-label')).toHaveText('Shared')
+  expect(
+    (
+      await request.post(`/api/rooms/${saved.id}/freeze`, {
+        headers: { Authorization: `Bearer ${saved.ownerKey}` },
+      })
+    ).status(),
+  ).toBe(200)
+  await page.reload()
+  await page.getByRole('button', { name: 'Keep a copy & continue' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(canvasShapes(page)).toHaveCount(1)
+  await expect
+    .poll(() =>
+      page
+        .locator('.tl-image')
+        .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+    )
+    .toBe(true)
+  expect(
+    (
+      await request.get(`/api/rooms/${saved.id}`, {
+        headers: { Authorization: `Bearer ${saved.editKey}` },
+      })
+    ).status(),
+  ).toBe(404)
+})
+
+test('names, colors, join/leave notifications and a live roster follow the connected sessions', async ({
+  page,
+  browser,
+}) => {
+  const url = await share(page)
+  await page.getByRole('textbox', { name: 'Your name', exact: true }).fill('Ada')
+  await page.getByRole('button', { name: 'Cursor color 3', exact: true }).click()
+  await page.getByRole('button', { name: 'Close sharing' }).click()
+  const context = await browser.newContext()
+  const other = await context.newPage()
+  await openShared(other, url)
+  await other.getByRole('button', { name: 'Share board', exact: true }).click()
+  await expect(other.locator('.presence-roster')).toContainText('Ada')
+  await other.getByRole('textbox', { name: 'Your name', exact: true }).fill('Grace')
+  await other.getByRole('button', { name: 'Cursor color 5', exact: true }).click()
+  await other.getByRole('button', { name: 'Close sharing' }).click()
+  await other.mouse.move(700, 450, { steps: 15 })
+  await expect(page.locator('.collaborator-name')).toContainText('Grace')
+  await expect(page.locator('.collaborator-name')).toHaveCSS(
+    'background-color',
+    'rgb(101, 116, 206)',
+  )
+  await page.waitForTimeout(300)
+  await page.evaluate(() => {
+    const cursor = document.querySelector<HTMLElement>('.whitebored-cursor')!
+    const positions = new Set<string>()
+    ;(window as any).__cursorFrames = positions
+    const observer = new MutationObserver(() => positions.add(cursor.style.transform))
+    observer.observe(cursor, { attributes: true, attributeFilter: ['style'] })
+    setTimeout(() => observer.disconnect(), 1500)
+  })
+  // One incoming pointer jump should render several intermediate animation frames.
+  await other.mouse.move(900, 500)
+  await expect
+    .poll(() => page.evaluate(() => (window as any).__cursorFrames.size))
+    .toBeGreaterThan(3)
+  await page.getByRole('button', { name: 'Share board', exact: true }).click()
+  await expect(page.locator('.presence-roster li')).toHaveCount(2)
+  await expect(page.locator('.presence-roster')).toContainText('Grace')
+  await page.waitForTimeout(250)
+  await page.screenshot({ path: '.qa/sharing-roster.png' })
+  await context.close()
+  await expect(page.locator('.presence-roster li')).toHaveCount(1)
+  await expect(page.getByText('Grace disconnected.', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Close sharing' }).click()
+  await page.reload()
+  await page.getByRole('button', { name: 'Share board', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Your name', exact: true })).toHaveValue('Ada')
 })
