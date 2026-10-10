@@ -79,7 +79,7 @@ export class SharedSocket implements TLPersistentClientSocket<any, any> {
   }
   private async connect() {
     if (this.stopped) return
-    if (!navigator.onLine) {
+    if (navigator.onLine === false) {
       this.status('offline')
       return
     }

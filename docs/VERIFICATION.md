@@ -2,7 +2,7 @@
 
 ## Multiplayer update — 10 October 2026
 
-- 36 unit/emulator tests pass, including 20-session admission, session expiry/freeze authorization, missed-expiry-alarm recovery, per-board file counts, atomic global media capacity, per-network upload quotas, immutable chunked storage, and short/legacy URL parsing.
+- 38 unit/emulator tests pass, including 20-session admission, session expiry/freeze authorization, missed-expiry-alarm recovery, per-board file counts, atomic global media capacity, per-network upload quotas, immutable chunked storage, short/legacy URL parsing, and network-state transitions without a WebSocket close handshake.
 - Eight collaboration browser tests pass: independent concurrent edits/undo, authorization, images and editable exports, offline reconciliation, mobile dark layout, identities/roster/disconnect notices, rendered cursor interpolation, owner stop-to-local flow, local-save failure/retry, and recovery with media after reloading an interrupted stop. One scenario covers multiple checks.
 - All 31 existing local-board browser tests and the production offline test pass. TypeScript, production build and license-configuration checks pass.
 - Fresh isolated browsers on the live HTTPS deployment verify drawing and image synchronization, reload, participant counts, unauthorized access denial, owner revocation and both participants continuing locally. The current Electron runtime verifies sharing through the production API and returning to its local `folio://app/` origin. This does not constitute a new signed installer release.

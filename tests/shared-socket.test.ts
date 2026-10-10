@@ -32,6 +32,7 @@ beforeEach(() => {
   Socket.instances = []
   vi.stubGlobal('window', new EventTarget())
   vi.stubGlobal('WebSocket', Socket)
+  vi.stubGlobal('navigator', { onLine: true })
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -39,6 +40,39 @@ afterEach(() => {
 })
 
 describe('shared transport navigation protection', () => {
+  it('responds to offline events without waiting for a close handshake, retaining pending edits', async () => {
+    const client = new SharedSocket('ws://example.test')
+    await Promise.resolve()
+    const ws = Socket.instances[0]
+    ws.open()
+    client.markDirty()
+    client.sendMessage({ type: 'push', clientClock: 0, diff: {} })
+    vi.spyOn(ws, 'close').mockImplementation(() => {
+      ws.readyState = 2
+    })
+    vi.stubGlobal('navigator', { onLine: false })
+    window.dispatchEvent(new Event('offline'))
+    expect(client.connectionStatus).toBe('offline')
+    expect(client.dirty).toBe(true)
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(Socket.instances).toHaveLength(1)
+    vi.stubGlobal('navigator', { onLine: true })
+    window.dispatchEvent(new Event('online'))
+    await Promise.resolve()
+    const next = Socket.instances[1]
+    next.open()
+    client.sendMessage({ type: 'push', clientClock: 1, diff: {} })
+    next.receive({ type: 'push_result', clientClock: 1, action: 'commit' })
+    expect(client.dirty).toBe(false)
+    client.close()
+  })
+  it('attempts a connection when online status is unavailable', async () => {
+    vi.stubGlobal('navigator', {})
+    const client = new SharedSocket('ws://example.test')
+    await Promise.resolve()
+    expect(Socket.instances).toHaveLength(1)
+    client.close()
+  })
   it('keeps later edits dirty when an earlier edit is acknowledged', async () => {
     const client = new SharedSocket('ws://example.test')
     await Promise.resolve()
