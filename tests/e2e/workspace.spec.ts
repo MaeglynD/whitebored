@@ -5,9 +5,18 @@ test('drawing, standard shortcuts, rename, board switching, reload and portable 
   page,
 }) => {
   const errors: string[] = []
+  const serverConnections: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
+  page.on('websocket', (socket) => {
+    // Vite's development hot-reload socket is unrelated to board storage.
+    if (new URL(socket.url()).pathname !== '/') serverConnections.push(socket.url())
+  })
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/')) serverConnections.push(request.url())
+  })
   await page.goto('/')
   await expect(page.getByRole('button', { name: 'Pen', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Share board', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'New board', exact: true }).click()
   await expect(
     page.getByRole('button', { name: 'Untitled board', exact: true }).last(),
@@ -45,6 +54,7 @@ test('drawing, standard shortcuts, rename, board switching, reload and portable 
   await expect(page.getByText('Board imported as a new copy')).toBeVisible()
   await expect(page.locator('.tl-shape')).toHaveCount(1)
   expect(errors).toEqual([])
+  expect(serverConnections).toEqual([])
 })
 
 test('favourites, duplicate, confirmed deletion and cancellation preserve the right boards', async ({

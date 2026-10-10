@@ -1,17 +1,15 @@
 # Verification
 
-## Multiplayer update — 10 October 2026
+## Local-only release — 10 October 2026
 
-- 38 unit/emulator tests pass, including 20-session admission, session expiry/freeze authorization, missed-expiry-alarm recovery, per-board file counts, atomic global media capacity, per-network upload quotas, immutable chunked storage, short/legacy URL parsing, and network-state transitions without a WebSocket close handshake.
-- Eight collaboration browser tests pass: independent concurrent edits/undo, authorization, images and editable exports, offline reconciliation, mobile dark layout, identities/roster/disconnect notices, rendered cursor interpolation, owner stop-to-local flow, local-save failure/retry, and recovery with media after reloading an interrupted stop. One scenario covers multiple checks.
-- All 31 existing local-board browser tests and the production offline test pass. TypeScript, production build and license-configuration checks pass.
-- Fresh isolated browsers on the live HTTPS deployment verify drawing and image synchronization, reload, participant counts, unauthorized access denial, owner revocation and both participants continuing locally. The current Electron runtime verifies sharing through the production API and returning to its local `folio://app/` origin. This does not constitute a new signed installer release.
-- `tests/capacity.test.ts` measures 1,200 SQLite row writes for 300 single-shape commits in the installed tldraw 5.4.2 adapter. The [capacity forecast](MULTIPLAYER-CAPACITY.md) uses this measured write amplification; it is not a production load test.
-- Desktop and narrow dark sharing panels were rendered and inspected. Test profiles contain synthetic boards only.
+Multiplayer has been removed from the UI, router, dependencies, server implementation, and deployment configuration.
 
-The local Workers emulator sometimes logs a request-stream cancellation warning when intentionally rejecting an unauthorized upload before reading its body. Expected denial responses and subsequent valid requests pass; the fresh production browser checks report no JavaScript errors. This is recorded rather than described as a warning-free run.
+- All 18 unit tests, 31 local-board browser tests, the production offline test, TypeScript/build checks, and the license-configuration check pass.
+- A fresh browser on `https://whitebored.app` verifies drawing, autosave/reload, whole-library export/import, dark mode and offline reload. There is no Share button, shared-board list, collaboration API request, or WebSocket connection.
+- The former shared-link path returns the static 404 page and its home link opens the existing local library. The capacity endpoint returns 404, board-creation POST returns 405, and a WebSocket upgrade is refused.
+- At 12:20 UTC, Cloudflare's API confirmed zero Durable Object namespaces, R2 buckets, D1 databases, and KV namespaces in the account. The `whitebored` deployment has no runtime bindings and no scheduled jobs. The deletion migration permanently retired `SharedRoom`, `ShareLimits`, and `CappedMedia`, including all stored data.
 
-The app's final deployment has no R2 binding or access code. Free-plan enforcement remains a provider/account setting, not something unit tests can establish. The owner confirmed Workers Free; no paid subscription was purchased or enabled.
+An initial live check reported a transient failed fetch while changing network state; the diagnostic repeat completed with no JavaScript errors. The SDK's external trial watermark request cannot load offline; local drawing and saving still work. No SDK licensing behavior was changed.
 
 ## Earlier application verification
 
@@ -38,6 +36,6 @@ Commands: `pnpm test`, `pnpm test:e2e`, `pnpm test:offline`, `pnpm test:desktop`
 - The large-board test is a local Chromium smoke test, not a guarantee of frame rate, arbitrary drawing complexity, or low-end-device performance.
 - The current unsigned native preview is for local evaluation. Public deployment requires an appropriate tldraw license; native releases also need signing/notarization and a defined update process.
 - Browser storage is not an external backup. Very recent edits can be lost if the process terminates before the save transaction completes. Save errors remain visible and block board transitions until resolved.
-- Shared collaboration is implemented; account-based login/recovery and a native automatic updater are not. Shared rooms are not a durable offline cache.
+- Multiplayer, cloud backup, account-based recovery, and a native automatic updater are not available.
 
 No real boards from the original `whiteboard` repository were edited or used in the tests.

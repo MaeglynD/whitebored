@@ -27,7 +27,6 @@ jobs:
         env:
           VITE_TLDRAW_LICENSE_KEY: ${{ secrets.TLDRAW_LICENSE_KEY }}
       - run: pnpm test:offline
-      - run: pnpm exec playwright test --config playwright.sharing.config.ts
       - run: pnpm exec wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

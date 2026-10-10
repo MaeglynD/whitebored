@@ -25,11 +25,7 @@ import {
   WifiOff,
   Folder,
   ArrowDownWideNarrow,
-  Users,
 } from 'lucide-react'
-import { ShareDialog } from './ShareDialog'
-import { sharedLinks, shareUrl, type SharedLink } from './sharing'
-import { navigateWorkspace, sharePath } from './shareLinks'
 import { Select } from './Select'
 import { BoardThumbnail } from './BoardThumbnail'
 import { exportLibrary, parseBoardFiles } from './backups'
@@ -66,13 +62,6 @@ const when = (time: number) => {
 }
 
 export function App() {
-  const [sharing, setSharing] = useState(false)
-  const [links, setLinks] = useState<SharedLink[]>(sharedLinks)
-  useEffect(() => {
-    const refresh = () => setLinks(sharedLinks())
-    window.addEventListener('whitebored-shared-links', refresh)
-    return () => window.removeEventListener('whitebored-shared-links', refresh)
-  }, [])
   const [boards, setBoards] = useState<Board[]>([])
   const [current, setCurrent] = useState<Awaited<ReturnType<typeof readBoard>> | null>(null)
   const [modal, setModal] = useState<Modal>(null)
@@ -654,30 +643,6 @@ export function App() {
             )}
           </div>
           <footer className="library-footer">
-            {links.length > 0 && (
-              <details className="shared-library">
-                <summary>
-                  <Users size={15} />
-                  Shared boards <span>{links.length}</span>
-                </summary>
-                <div>
-                  {links.map((link) => (
-                    <a
-                      key={link.id}
-                      href={shareUrl(link)}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        void transition(async () => {
-                          navigateWorkspace(sharePath(link))
-                        })
-                      }}
-                    >
-                      {link.title}
-                    </a>
-                  ))}
-                </div>
-              </details>
-            )}
             <button onClick={() => input.current?.click()}>
               <Upload size={15} />
               Import boards
@@ -708,7 +673,7 @@ export function App() {
             dark={prefs.theme === 'dark'}
             penOnly={prefs.penOnly}
             keys={keys}
-            blocked={!!modal || busy || sharing}
+            blocked={!!modal || busy}
             onAction={onAction}
           />
         </section>
@@ -784,14 +749,6 @@ export function App() {
         >
           <Plus size={17} />
         </button>
-        <button
-          aria-label="Share board"
-          title="Share board"
-          disabled={!current || busy}
-          onClick={() => setSharing(true)}
-        >
-          <Users size={17} />
-        </button>
       </div>
       {offline && (
         <div className="offline-badge">
@@ -844,21 +801,6 @@ export function App() {
             {busyLabel}
           </div>
         </>
-      )}
-      {sharing && current && (
-        <ShareDialog
-          board={current.board}
-          canvas={() => canvas.current}
-          onOpen={(link) => {
-            void transition(async () => {
-              navigateWorkspace(sharePath(link))
-            })
-          }}
-          onClose={() => {
-            setSharing(false)
-            returnToCanvas()
-          }}
-        />
       )}
       <Dialog.Root
         open={!!modal}

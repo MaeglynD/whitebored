@@ -17,7 +17,7 @@ export default defineConfig({
             attrs: {
               'http-equiv': 'Content-Security-Policy',
               content:
-                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: data: https: wss:; media-src 'self' data: blob: https:; frame-src https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:",
+                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: data: https:; media-src 'self' data: blob: https:; frame-src https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:",
             },
             injectTo: 'head',
           },
@@ -53,7 +53,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackAllowlist: [/^\/$/],
         cleanupOutdatedCaches: true,
       },
     }),
@@ -61,17 +61,6 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8790',
-        ws: true,
-        changeOrigin: true,
-        configure(proxy) {
-          proxy.on('proxyReq', (req) => req.setHeader('Origin', 'http://127.0.0.1:8790'))
-          proxy.on('proxyReqWs', (req) => req.setHeader('Origin', 'http://127.0.0.1:8790'))
-        },
-      },
-    },
   },
   build: { sourcemap: true },
 })

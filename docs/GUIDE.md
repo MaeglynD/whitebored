@@ -19,7 +19,6 @@ pnpm preview        # Preview the built app locally
 pnpm test           # Storage transactions and failed-save recovery
 pnpm test:e2e       # Drawing, library, assets, conflict and large-board tests
 pnpm test:offline   # Production service-worker/offline check on port 5188
-pnpm test:sharing   # Build + two-browser collaboration tests against local Cloudflare emulation
 ```
 
 For browser tests, first run `pnpm exec playwright install chromium`. Stop any unrelated service on the configured test ports before testing. Never use real personal boards as test fixtures.
@@ -55,26 +54,6 @@ The desktop shell uses packaged files and its own IndexedDB library under Electr
 - Existing multi-page imports remain accessible through **Board menu → Imported pages**. New boards have one canvas, with no page selector or page-creation controls.
 
 Browser storage is local to the browser profile **and origin**. Changing host, port, browser, or device creates a separate library. Clearing site data can erase it. Whitebored requests persistent storage after creating a board, but a browser can refuse the request. This is not cloud backup or cross-device sync.
-
-## Sharing
-
-Click the people icon beside the title, then **Create shared copy**. This uploads the board/media and immediately opens the shared copy. The original stays local and independent. Copy the short `https://whitebored.app/s/…` link to invite people; everyone with it can edit without an account. Older shared links remain supported.
-
-The Share button shows connected participants. Open it to choose your name/color, copy the link, or see the full roster. Names appear beside smoothly animated cursors. Join/leave notices and a reconnecting banner show connection changes; a silent network loss can take about two minutes to disappear. Extra tabs count as separate connections. Preferences/cameras stay personal and undo affects your own edits.
-
-Previously opened rooms appear under **Shared boards** in the sidebar. Shared links last **seven days**, including time with nobody connected; the expiry appears in Share. Documents and media use SQLite Durable Objects. Local boards use IndexedDB and are never uploaded automatically.
-
-The creator can choose **Share → Stop sharing**. After confirmation, Whitebored freezes the final online document, saves it with its media as a local board, revokes the link and returns the creator to that local board at the normal URL. If local saving fails, the frozen board remains recoverable by the owner until expiry; reopening its link offers **Keep a copy & continue**. Guests see a clear ended-session screen with the same action for their current copy, or **Back to local boards**.
-
-The owner's separate key stays in the creator's browser. Clearing site data loses owner access; edit links cannot revoke sessions. Neither key is included in board exports. Revocation cannot erase copies participants already saved. Keep links private: the short path is a random 128-bit bearer capability, not a public board identifier.
-
-Use **Board menu → Save local copy** or **Export** while sharing. **Export all boards** includes local boards only. Media is embedded in editable exports. The app preloads media for recovery, but a file that never reached a guest cannot be retrieved after revocation; save important copies before ending the session.
-
-Shared editing requires a connection. If disconnected, keep the tab open while it reconnects; pending edits remain in memory and merge on reconnection. They are not a durable offline cache. Save a local copy before closing if reconnection is impossible. Closing/navigating warns about unsynced work.
-
-Limits include 20 connections per board; 20,000 records / 8 MiB per document; 10 MiB per file; 100 files / 100 MiB per board; and 512 MiB of media across the deployment. PNG, JPEG, WebP, GIF, AVIF, MP4, WebM and MOV are supported. Bookmark cards and SVG uploads are not supported. Removing a shape retains its media for undo until the session ends. Network/day and server-wide creation/upload quotas also apply. See [all limits](COST-CONTROLS.md) and [realistic capacity](MULTIPLAYER-CAPACITY.md).
-
-For collaboration development, run `pnpm build`, then `pnpm dev:sync`, and open `http://127.0.0.1:8790` in two browser profiles. SQLite runs locally with no Cloudflare account. Alternatively run `pnpm dev` alongside `pnpm dev:sync`; Vite proxies `/api` and WebSockets to port 8790. Production requires the [deployment bindings](DEPLOYMENT.md).
 
 ## Controls
 
@@ -120,7 +99,7 @@ Updates are offered with **Save & update**, so a waiting service worker does not
 
 For your own deployment, add the public key issued by tldraw to `.env.local` as `VITE_TLDRAW_LICENSE_KEY`, or to the build environment. Run `pnpm release:check`, then build. That check only verifies a key is configured; test actual domain coverage and expiry on the intended production origin. Preserve tldraw's watermark and licensing logic.
 
-For web hosting, serve `dist/` over HTTPS on a stable origin with SPA fallback to `index.html`. Serve HTML and `sw.js` with revalidation; hashed assets can be cached immutably. Local-only boards need no app server or account system; sharing requires the collaboration backend described above. Ensure your hosting provider sends correct MIME types and compresses assets.
+The app builds to static files in `dist/`. Cloudflare Workers Static Assets serves the live site; other static hosts can serve the same build. No application server, remote database, or media bucket is required. See [Deployment](DEPLOYMENT.md).
 
 Before native release, sign Windows binaries and sign/notarize macOS binaries, test on each target OS, verify pen hardware, and choose an update-distribution process. The Windows preview produced locally is unsigned. There is no native auto-updater yet.
 
