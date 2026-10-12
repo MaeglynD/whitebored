@@ -28,6 +28,8 @@ import {
 } from 'lucide-react'
 import { Select } from './Select'
 import { BoardThumbnail } from './BoardThumbnail'
+import { BoardLibrary } from './BoardLibrary'
+import { useMobileLayout } from './useMobileLayout'
 import { exportLibrary, parseBoardFiles } from './backups'
 import { Shortcuts } from './Shortcuts'
 import { readKeymap, bindingLabel, type Command } from './keymap'
@@ -62,12 +64,13 @@ const when = (time: number) => {
 }
 
 export function App() {
+  const mobile = useMobileLayout()
   const [boards, setBoards] = useState<Board[]>([])
   const [current, setCurrent] = useState<Awaited<ReturnType<typeof readBoard>> | null>(null)
   const [modal, setModal] = useState<Modal>(null)
   const [sidebar, setSidebar] = useState(() => {
     try {
-      return localStorage.getItem('folio-sidebar') === 'open'
+      return !mobile && localStorage.getItem('folio-sidebar') === 'open'
     } catch {
       return false
     }
@@ -97,7 +100,14 @@ export function App() {
   const [collection, setCollection] = useState('')
   const canvas = useRef<CanvasHandle>(null)
   const input = useRef<HTMLInputElement>(null)
+  const boardsTrigger = useRef<HTMLButtonElement>(null)
   const returnToCanvas = () => {
+    if (mobile && sidebar) {
+      document
+        .querySelector<HTMLElement>('.mobile-library .sidebar-heading h2')
+        ?.focus({ preventScroll: true })
+      return
+    }
     const editor = canvas.current?.editor
     if (editor) focusCanvas(editor)
   }
@@ -126,12 +136,13 @@ export function App() {
     }
   }, [keys])
   useEffect(() => {
+    if (mobile) return
     try {
       localStorage.setItem('folio-sidebar', sidebar ? 'open' : 'closed')
     } catch {
       /* optional */
     }
-  }, [sidebar])
+  }, [sidebar, mobile])
   useEffect(() => {
     try {
       localStorage.setItem('folio-board-sort', sort)
@@ -249,9 +260,9 @@ export function App() {
     }
   }, [])
   useEffect(() => {
-    if (modal) canvas.current?.editor?.blur()
+    if (modal || (mobile && sidebar)) canvas.current?.editor?.blur()
     else if (canvas.current?.editor) focusCanvas(canvas.current.editor)
-  }, [modal])
+  }, [modal, mobile, sidebar])
   const transition = async (fn: () => Promise<void>, label = 'Saving your place…') => {
     if (busyRef.current) return
     busyRef.current = true
@@ -272,7 +283,7 @@ export function App() {
     } finally {
       if (editor && canvas.current?.editor === editor) {
         editor.updateInstanceState({ isReadonly: wasReadonly })
-        if (!latest.current.modal) focusCanvas(editor)
+        if (!latest.current.modal && !(mobile && latest.current.sidebar)) focusCanvas(editor)
       }
       busyRef.current = false
       setBusy(false)
@@ -282,6 +293,7 @@ export function App() {
     void transition(async () => {
       const data = await readBoard(id)
       setCurrent(data)
+      if (mobile) setSidebar(false)
       setModal(null)
       setStatus('saved')
       try {
@@ -306,6 +318,7 @@ export function App() {
         template,
       )
       setCurrent({ board, snapshot: undefined })
+      if (mobile) setSidebar(false)
       setModal(null)
       setStatus('saved')
       try {
@@ -358,6 +371,7 @@ export function App() {
     void transition(async () => {
       const copy = await duplicateBoard(board.id)
       setCurrent(await readBoard(copy.id))
+      if (mobile) setSidebar(false)
       setModal(null)
       setToast('Board duplicated')
     })
@@ -496,164 +510,161 @@ export function App() {
           if (files.length) void importFiles(files)
         }}
       />
-      {sidebar && (
-        <aside className="board-sidebar" aria-label="Board library" data-app-ui>
-          <div className="sidebar-heading">
-            <h2>Boards</h2>
-            <button
-              aria-label="Close board library"
-              title="Close board library"
-              onClick={() => setSidebar(false)}
-            >
-              <X size={17} />
-            </button>
-          </div>
-
-          <div className="library-toolbar">
-            <label className="library-search">
-              <Search size={16} />
-              <input
-                aria-label="Search boards"
-                placeholder="Find a board…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <kbd>{bindingLabel(keys.boards[0])}</kbd>
-            </label>
-            <button
-              className="primary"
-              aria-label="New board in library"
-              onClick={() => fresh()}
-              disabled={busy}
-            >
-              <Plus size={16} />
-              New board
-            </button>
-          </div>
-          <div className="library-filters">
-            <Select
-              label="Show boards"
-              value={filter}
-              onChange={setFilter}
-              onClose={current ? returnToCanvas : undefined}
-              options={[
-                { value: 'all', label: 'All boards', icon: <Layers3 size={15} /> },
-                { value: 'favorites', label: 'Favourites', icon: <Star size={15} /> },
-                { value: 'collections', label: 'Collections', icon: <Folder size={15} /> },
-                { value: 'unfiled', label: 'Unfiled', group: 'Collections' },
-                ...folders.map((f) => ({
-                  value: 'folder:' + f,
-                  label: f,
-                  group: 'Collections',
-                  icon: <Folder size={14} />,
-                })),
-              ]}
+      <BoardLibrary
+        open={sidebar}
+        mobile={mobile}
+        covered={!!modal}
+        onClose={() => setSidebar(false)}
+        onReturnFocus={() => {
+          if (!latest.current.modal) boardsTrigger.current?.focus({ preventScroll: true })
+        }}
+      >
+        <div className="library-toolbar">
+          <label className="library-search">
+            <Search size={16} />
+            <input
+              aria-label="Search boards"
+              placeholder="Find a board…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
             />
-            <Select
-              label="Sort boards"
-              value={sort}
-              onChange={setSort}
-              onClose={current ? returnToCanvas : undefined}
-              compact
-              icon={<ArrowDownWideNarrow size={16} />}
-              options={[
-                { value: 'edited-desc', label: 'Last edited', group: 'Sort by' },
-                { value: 'edited-asc', label: 'Least recently edited', group: 'Sort by' },
-                { value: 'created-desc', label: 'Newest created', group: 'Sort by' },
-                { value: 'created-asc', label: 'Oldest created', group: 'Sort by' },
-              ]}
-            />
-          </div>
-          <div className="boards-scroll">
-            {visible.length ? (
-              <div className="boards-grid">
-                {visible.map((b) => (
-                  <article
-                    className={'board-card' + (b.id === current?.board.id ? ' current' : '')}
-                    key={b.id}
+            <kbd>{bindingLabel(keys.boards[0])}</kbd>
+          </label>
+          <button
+            className="primary"
+            aria-label="New board in library"
+            onClick={() => fresh()}
+            disabled={busy}
+          >
+            <Plus size={16} />
+            New board
+          </button>
+        </div>
+        <div className="library-filters">
+          <Select
+            label="Show boards"
+            value={filter}
+            onChange={setFilter}
+            onClose={current && !mobile ? returnToCanvas : undefined}
+            options={[
+              { value: 'all', label: 'All boards', icon: <Layers3 size={15} /> },
+              { value: 'favorites', label: 'Favourites', icon: <Star size={15} /> },
+              { value: 'collections', label: 'Collections', icon: <Folder size={15} /> },
+              { value: 'unfiled', label: 'Unfiled', group: 'Collections' },
+              ...folders.map((f) => ({
+                value: 'folder:' + f,
+                label: f,
+                group: 'Collections',
+                icon: <Folder size={14} />,
+              })),
+            ]}
+          />
+          <Select
+            label="Sort boards"
+            value={sort}
+            onChange={setSort}
+            onClose={current && !mobile ? returnToCanvas : undefined}
+            compact
+            icon={<ArrowDownWideNarrow size={16} />}
+            options={[
+              { value: 'edited-desc', label: 'Last edited', group: 'Sort by' },
+              { value: 'edited-asc', label: 'Least recently edited', group: 'Sort by' },
+              { value: 'created-desc', label: 'Newest created', group: 'Sort by' },
+              { value: 'created-asc', label: 'Oldest created', group: 'Sort by' },
+            ]}
+          />
+        </div>
+        <div className="boards-scroll">
+          {visible.length ? (
+            <div className="boards-grid">
+              {visible.map((b) => (
+                <article
+                  className={'board-card' + (b.id === current?.board.id ? ' current' : '')}
+                  key={b.id}
+                >
+                  <button
+                    className="board-preview"
+                    aria-label={'Open ' + b.title}
+                    aria-current={b.id === current?.board.id ? 'true' : undefined}
+                    disabled={busy}
+                    onClick={() => open(b.id)}
                   >
-                    <button
-                      className="board-preview"
-                      aria-label={'Open ' + b.title}
-                      onClick={() => open(b.id)}
-                    >
-                      <BoardThumbnail board={b} theme={prefs.theme} />
-                      {b.id === current?.board.id && <span className="current-badge">Open</span>}
+                    <BoardThumbnail board={b} theme={prefs.theme} />
+                    {b.id === current?.board.id && <span className="current-badge">Open</span>}
+                  </button>
+                  <div className="card-info">
+                    <button className="card-title" disabled={busy} onClick={() => open(b.id)}>
+                      {b.title}
                     </button>
-                    <div className="card-info">
-                      <button className="card-title" onClick={() => open(b.id)}>
-                        {b.title}
-                      </button>
-                      <div className="card-meta">
-                        <span>
-                          {sort.startsWith('created') ? 'Created ' : 'Edited '}
-                          {when(sort.startsWith('created') ? b.createdAt : b.updatedAt)}
-                          {b.collection ? ' · ' + b.collection : ''}
-                        </span>
-                        <div className="card-actions">
-                          <button
-                            aria-label={'Favorite ' + b.title}
-                            title="Favourite"
-                            className={b.favorite ? 'is-favorite' : ''}
-                            onClick={() => void metadata(b.id, { favorite: !b.favorite })}
-                          >
-                            <Star size={13} fill={b.favorite ? 'currentColor' : 'none'} />
-                          </button>
-                          <button
-                            aria-label={'Duplicate ' + b.title}
-                            title="Duplicate"
-                            onClick={() => duplicate(b)}
-                          >
-                            <Copy size={13} />
-                          </button>
+                    <div className="card-meta">
+                      <span>
+                        {sort.startsWith('created') ? 'Created ' : 'Edited '}
+                        {when(sort.startsWith('created') ? b.createdAt : b.updatedAt)}
+                        {b.collection ? ' · ' + b.collection : ''}
+                      </span>
+                      <div className="card-actions">
+                        <button
+                          aria-label={'Favorite ' + b.title}
+                          title="Favourite"
+                          className={b.favorite ? 'is-favorite' : ''}
+                          onClick={() => void metadata(b.id, { favorite: !b.favorite })}
+                        >
+                          <Star size={13} fill={b.favorite ? 'currentColor' : 'none'} />
+                        </button>
+                        <button
+                          aria-label={'Duplicate ' + b.title}
+                          title="Duplicate"
+                          onClick={() => duplicate(b)}
+                        >
+                          <Copy size={13} />
+                        </button>
 
-                          <button
-                            aria-label={'Delete ' + b.title}
-                            title="Delete board"
-                            onClick={() => requestDelete(b)}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                        <button
+                          aria-label={'Delete ' + b.title}
+                          title="Delete board"
+                          onClick={() => requestDelete(b)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-library">
-                <Layers3 size={26} />
-                <h3>
-                  {query
-                    ? 'No matching boards'
-                    : filter === 'favorites'
-                      ? 'No favourites'
-                      : 'No boards'}
-                </h3>
-                <p>
-                  {query
-                    ? 'Try another name.'
-                    : filter === 'favorites'
-                      ? 'Star a board to find it here.'
-                      : filter === 'collections'
-                        ? 'Add a collection in a board’s details.'
-                        : 'Create a board to begin.'}
-                </p>
-              </div>
-            )}
-          </div>
-          <footer className="library-footer">
-            <button onClick={() => input.current?.click()}>
-              <Upload size={15} />
-              Import boards
-            </button>
-            <button onClick={exportAll} disabled={!boards.length || busy}>
-              <Download size={15} />
-              Export all boards
-            </button>
-          </footer>
-        </aside>
-      )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-library">
+              <Layers3 size={26} />
+              <h3>
+                {query
+                  ? 'No matching boards'
+                  : filter === 'favorites'
+                    ? 'No favourites'
+                    : 'No boards'}
+              </h3>
+              <p>
+                {query
+                  ? 'Try another name.'
+                  : filter === 'favorites'
+                    ? 'Star a board to find it here.'
+                    : filter === 'collections'
+                      ? 'Add a collection in a board’s details.'
+                      : 'Create a board to begin.'}
+              </p>
+            </div>
+          )}
+        </div>
+        <footer className="library-footer">
+          <button onClick={() => input.current?.click()}>
+            <Upload size={15} />
+            Import boards
+          </button>
+          <button onClick={exportAll} disabled={!boards.length || busy}>
+            <Download size={15} />
+            Export all boards
+          </button>
+        </footer>
+      </BoardLibrary>
       {current ? (
         <section
           className={'canvas-area' + (current.board.legacy ? ' legacy' : '')}
@@ -673,7 +684,7 @@ export function App() {
             dark={prefs.theme === 'dark'}
             penOnly={prefs.penOnly}
             keys={keys}
-            blocked={!!modal || busy}
+            blocked={!!modal || busy || (mobile && sidebar)}
             onAction={onAction}
           />
         </section>
@@ -692,6 +703,7 @@ export function App() {
       )}
       <div className="board-controls glass" onPointerDown={keepCanvasFocus}>
         <button
+          ref={boardsTrigger}
           className="boards-trigger"
           aria-label="Boards"
           aria-expanded={sidebar}
@@ -817,7 +829,7 @@ export function App() {
             onCloseAutoFocus={(e) => {
               e.preventDefault()
               requestAnimationFrame(() => {
-                if (canvas.current?.editor) focusCanvas(canvas.current.editor)
+                returnToCanvas()
               })
             }}
           >

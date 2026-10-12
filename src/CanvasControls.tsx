@@ -36,6 +36,7 @@ import { bindingLabel, type Command, type Keymap } from './keymap'
 import { TextControls } from './TextControls'
 import { Select } from './Select'
 import { applyInk, palette, widths, type Ink } from './ink'
+import { useMobileLayout } from './useMobileLayout'
 
 export interface CanvasControlsProps {
   dark: boolean
@@ -68,6 +69,7 @@ export const keepCanvasFocus = (event: ReactPointerEvent<HTMLElement>) => {
 }
 
 export function CanvasControls(props: CanvasControlsProps) {
+  const mobile = useMobileLayout()
   const editor = useEditor()
   const camera = useMemo(() => new CameraController(editor), [editor])
   camera.speed = props.zoomSpeed
@@ -465,6 +467,19 @@ export function CanvasControls(props: CanvasControlsProps) {
               </button>
             )}
             <div className="menu-rule" />
+            {mobile && (
+              <>
+                <button onClick={() => action('settings')}>
+                  <Settings2 size={15} />
+                  <span>Preferences</span>
+                </button>
+                <button onClick={() => action('shortcuts')}>
+                  <Keyboard size={15} />
+                  <span>Keyboard shortcuts</span>
+                </button>
+                <div className="menu-rule" />
+              </>
+            )}
             <button onClick={() => action('grid')} aria-pressed={props.grid}>
               <Grid2X2 size={15} />
               <span>Toggle grid</span>

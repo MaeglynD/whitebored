@@ -38,7 +38,7 @@ The desktop shell uses packaged files and its own IndexedDB library under Electr
 
 ## Your boards
 
-- Click the stacked-board icon or press Ctrl/Cmd K to toggle the board sidebar. It stays open across board switches and reloads. A single menu filters All boards, Favourites, Collections, and individual collections. The adjacent sort button offers newest/oldest creation and most/least recent editing; your choice persists.
+- Click the stacked-board icon or press Ctrl/Cmd K to open the board library. On desktop, the sidebar stays open across board switches and reloads. On phones, a sheet shows board previews and closes after opening or creating a board. Tap outside the sheet or its close button to dismiss it. A single menu filters All boards, Favourites, Collections, and individual collections. The adjacent sort button offers newest/oldest creation and most/least recent editing; your choice persists.
 - The plus beside the title immediately creates a blank board. The five primary tools are Select, Pen, Eraser, Text, and Hand.
 - Click the title to rename a board or assign a collection. Create a collection by entering a new name.
 - The star beside the title toggles a favourite. Rename by clicking the title. These actions are no longer repeated in the board menu.
@@ -56,6 +56,8 @@ The desktop shell uses packaged files and its own IndexedDB library under Electr
 Browser storage is local to the browser profile **and origin**. Changing host, port, browser, or device creates a separate library. Clearing site data can erase it. Whitebored requests persistent storage after creating a board, but a browser can refuse the request. This is not cloud backup or cross-device sync.
 
 ## Controls
+
+On phones, the drawing toolbar stays on one row. Tap the current ink colour for the full palette, stroke width, text size and opacity. **Preferences** and **Keyboard shortcuts** are in the three-dot board menu at the top right. Pinch to zoom; the zoom percentage opens additional zoom options.
 
 | Action                                   | Shortcut                                       |
 | ---------------------------------------- | ---------------------------------------------- |

@@ -97,7 +97,7 @@ test('small-screen navigation fits and remains operable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await page.getByRole('button', { name: 'Boards', exact: true }).click()
-  await expect(page.getByRole('complementary', { name: 'Board library' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Boards', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Close board library' }).click()
   await page.getByRole('button', { name: 'Ink controls', exact: true }).click()
   await expect(page.getByRole('group', { name: 'Ink settings' })).toBeVisible()
